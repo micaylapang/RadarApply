@@ -9,6 +9,12 @@ export const metadata: Metadata = {
   title: "RadarApply — Instant internship open alerts",
   description:
     "RadarApply texts you the second an internship application opens. Name, phone, pick what to track — never miss a drop again.",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icon", type: "image/png", sizes: "32x32" },
+    ],
+  },
 };
 
 export default function RootLayout({

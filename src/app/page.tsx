@@ -1,6 +1,5 @@
 import { SignupForm } from "@/components/SignupForm";
 import { INTERNSHIP_CATALOG } from "@/lib/internships";
-import { isSupabaseConfigured } from "@/lib/supabase";
 
 // Fast first paint — do not block the page on Supabase
 export const dynamic = "force-static";
@@ -16,8 +15,6 @@ const catalogInternships = INTERNSHIP_CATALOG.map((item, i) => ({
 }));
 
 export default function Home() {
-  const supabaseReady = isSupabaseConfigured();
-
   return (
     <div className="page">
       <nav className="nav">
@@ -79,11 +76,7 @@ export default function Home() {
 
       <footer className="footer">
         <span>© RadarApply 2026</span>
-        <span>
-          {supabaseReady
-            ? "Watch loop every ~1 min on Vercel · SMS via Twilio"
-            : "Add Supabase keys to .env to enable signups"}
-        </span>
+        <span>Watch loop every ~1 min</span>
       </footer>
     </div>
   );
