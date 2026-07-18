@@ -10,8 +10,8 @@
   --accent-ink: #1a0500;
   --danger: #ff6b5a;
   --glow: rgba(255, 59, 31, 0.35);
-  --font-display: var(--font-jakarta), "Helvetica Neue", sans-serif;
-  --font-body: var(--font-jakarta), "Helvetica Neue", sans-serif;
+  --font-display: "Plus Jakarta Sans", "Helvetica Neue", sans-serif;
+  --font-body: "Plus Jakarta Sans", "Helvetica Neue", sans-serif;
 }
 
 @theme inline {

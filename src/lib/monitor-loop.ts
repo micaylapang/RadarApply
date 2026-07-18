@@ -24,7 +24,7 @@ export function startMonitorLoop() {
 
   const interval = Number(process.env.POLL_INTERVAL_MS ?? "1000");
 
-  console.log(`[monitor] DropNoti watcher starting (every ${interval}ms)`);
+  console.log(`[monitor] RadarApply watcher starting (every ${interval}ms)`);
   console.log(
     `[monitor] SMS: ${smsConfigured() ? "Twilio live" : "dev mode (console only)"}`,
   );

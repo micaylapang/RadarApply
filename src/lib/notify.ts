@@ -102,7 +102,7 @@ export async function pollOnce() {
           applyUrl: applyUrl ?? internship.applyUrl,
         });
 
-        // First sync only — don't SMS for jobs that were already open before DropNoti started
+        // First sync only — don't SMS for jobs that were already open before RadarApply started
         if (isFirstCheck) {
           console.log(
             `[monitor] synced open (no alert): ${internship.company} — ${internship.title}`,

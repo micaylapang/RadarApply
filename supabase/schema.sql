@@ -1,4 +1,4 @@
--- DropNoti schema for Supabase
+-- RadarApply schema for Supabase
 -- Run this in: Supabase Dashboard → SQL Editor → New query → Run
 
 create extension if not exists "pgcrypto";

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 export type InternshipOption = {
   id: string;
@@ -13,12 +13,13 @@ export type InternshipOption = {
 };
 
 type Props = {
-  internships: InternshipOption[];
+  initialInternships: InternshipOption[];
 };
 
 type Phase = "form" | "success";
 
-export function SignupForm({ internships }: Props) {
+export function SignupForm({ initialInternships }: Props) {
+  const [internships, setInternships] = useState(initialInternships);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -30,6 +31,51 @@ export function SignupForm({ internships }: Props) {
   >([]);
   const [testStatus, setTestStatus] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+
+    fetch("/api/internships", { signal: controller.signal })
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled || !Array.isArray(data.internships) || data.internships.length === 0) {
+          return;
+        }
+        setInternships(
+          data.internships.map(
+            (i: {
+              id: string;
+              company: string;
+              title: string;
+              slug: string;
+              description: string | null;
+              status: string;
+              sourceType: string;
+            }) => ({
+              id: i.id,
+              company: i.company,
+              title: i.title,
+              slug: i.slug,
+              description: i.description,
+              status: i.status,
+              sourceType: i.sourceType,
+            }),
+          ),
+        );
+      })
+      .catch(() => {
+        // Keep initial catalog if the API is slow/unavailable
+      })
+      .finally(() => clearTimeout(timer));
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, []);
 
   const grouped = useMemo(() => {
     const map = new Map<string, InternshipOption[]>();
@@ -50,12 +96,52 @@ export function SignupForm({ internships }: Props) {
     });
   }
 
+  async function sendTestText() {
+    setTesting(true);
+    setTestStatus(null);
+    try {
+      const res = await fetch("/api/demo/open", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: "droptext-demo" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTestStatus(data.error ?? "Couldn’t send the test text.");
+        return;
+      }
+      if (data.sent > 0) {
+        setTestStatus(
+          "Sent — check your phone. (On Twilio trial, the text may use Twilio’s sample wording.)",
+        );
+      } else if (data.subscribers === 0) {
+        setTestStatus(
+          "No text sent. Make sure you selected RadarApply Demo when signing up.",
+        );
+      } else if (data.errors?.length) {
+        setTestStatus(data.errors[0]);
+      } else {
+        setTestStatus("Text failed to send. Check your Twilio setup.");
+      }
+    } catch {
+      setTestStatus("Network error. Refresh and try again.");
+    } finally {
+      setTesting(false);
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
 
     if (selected.size === 0) {
       setError("Pick at least one internship to track.");
+      return;
+    }
+
+    // Catalog placeholders can't be saved — wait for real Supabase IDs
+    if (Array.from(selected).some((id) => id.startsWith("catalog-"))) {
+      setError("Still loading live listings — wait a second and try again.");
       return;
     }
 
@@ -84,48 +170,14 @@ export function SignupForm({ internships }: Props) {
     }
   }
 
-  async function sendTestText() {
-    setTesting(true);
-    setTestStatus(null);
-    try {
-      const res = await fetch("/api/demo/open", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: "droptext-demo" }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setTestStatus(data.error ?? "Couldn’t send the test text.");
-        return;
-      }
-      if (data.sent > 0) {
-        setTestStatus(
-          "Sent — check your phone. (On Twilio trial, the text may use Twilio’s sample wording.)",
-        );
-      } else if (data.subscribers === 0) {
-        setTestStatus(
-          "No text sent. Make sure you selected DropNoti Demo when signing up.",
-        );
-      } else if (data.errors?.length) {
-        setTestStatus(data.errors[0]);
-      } else {
-        setTestStatus("Text failed to send. Check your Twilio setup.");
-      }
-    } catch {
-      setTestStatus("Network error. Refresh and try again.");
-    } finally {
-      setTesting(false);
-    }
-  }
-
   if (phase === "success") {
     return (
       <div className="success-panel" role="status">
         <p className="success-kicker">You&apos;re locked in</p>
         <h2 className="success-title">We&apos;ll text you the second it opens.</h2>
         <p className="success-copy">
-          DropNoti is watching your list. The moment a
-          listing flips open, your phone gets the alert — not five minutes later.
+          RadarApply is watching your list. The moment a listing flips open,
+          your phone gets the alert — not five minutes later.
         </p>
         <ul className="success-list">
           {tracking.map((t) => (

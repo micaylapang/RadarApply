@@ -1,17 +1,14 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import "@fontsource/plus-jakarta-sans/400.css";
+import "@fontsource/plus-jakarta-sans/500.css";
+import "@fontsource/plus-jakarta-sans/600.css";
+import "@fontsource/plus-jakarta-sans/700.css";
 import "./globals.css";
 
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
 export const metadata: Metadata = {
-  title: "DropNoti — Instant internship open alerts",
+  title: "RadarApply — Instant internship open alerts",
   description:
-    "DropNoti texts you the second an internship application opens. Name, phone, pick what to track — never miss a drop again.",
+    "RadarApply texts you the second an internship application opens. Name, phone, pick what to track — never miss a drop again.",
 };
 
 export default function RootLayout({
@@ -20,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${jakarta.variable} h-full`}>
+    <html lang="en" className="h-full">
       <body className="min-h-full antialiased">{children}</body>
     </html>
   );

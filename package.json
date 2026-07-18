@@ -1,5 +1,5 @@
 {
-  "name": "dropnoti",
+  "name": "radar-apply",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -11,12 +11,13 @@
     "db:seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
+    "@fontsource/plus-jakarta-sans": "^5.2.8",
     "@supabase/supabase-js": "^2.91.0",
     "dotenv": "^17.4.2",
     "libphonenumber-js": "^1.13.9",
-    "next": "16.2.10",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "next": "^15.5.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "twilio": "^6.0.2",
     "zod": "^4.4.3"
   },
@@ -27,7 +28,7 @@
     "@types/react-dom": "^19",
     "@types/twilio": "^3.19.2",
     "eslint": "^9",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "^15.5.9",
     "tailwindcss": "^4",
     "tsx": "^4.23.1",
     "typescript": "^5"

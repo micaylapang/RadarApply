@@ -95,7 +95,7 @@ export const INTERNSHIP_CATALOG: InternshipCatalogItem[] = [
     titleFilter: "intern",
   },
   {
-    company: "DropNoti Demo",
+    company: "RadarApply Demo",
     title: "Demo Internship (manual trigger)",
     slug: "droptext-demo",
     description: "Use the demo trigger to test instant SMS end-to-end",
