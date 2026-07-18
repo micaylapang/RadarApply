@@ -10,10 +10,8 @@ export const metadata: Metadata = {
   description:
     "RadarApply texts you the second an internship application opens. Name, phone, pick what to track — never miss a drop again.",
   icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/icon", type: "image/png", sizes: "32x32" },
-    ],
+    icon: [{ url: "/icon", type: "image/png", sizes: "64x64" }],
+    apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
   },
 };
 
