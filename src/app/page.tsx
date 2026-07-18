@@ -43,7 +43,7 @@ export default function Home() {
             </span>
           </h1>
           <p className="hero-line">
-            Get a text the second an internship application opens.
+            Get instant texts when internships on your radar open.
           </p>
           <div className="hero-actions">
             <a className="btn-primary" href="#signup">
@@ -78,7 +78,7 @@ export default function Home() {
       </section>
 
       <footer className="footer">
-        <span>🔥 RadarApply — internship drops, instantly.</span>
+        <span>© RadarApply 2026</span>
         <span>
           {supabaseReady
             ? "Watch loop every ~1 min on Vercel · SMS via Twilio"
