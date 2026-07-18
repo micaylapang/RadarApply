@@ -104,7 +104,7 @@ export function SignupForm({ internships }: Props) {
         );
       } else if (data.subscribers === 0) {
         setTestStatus(
-          "No text sent. Make sure you selected DropText Demo when signing up.",
+          "No text sent. Make sure you selected DropNoti Demo when signing up.",
         );
       } else if (data.errors?.length) {
         setTestStatus(data.errors[0]);
@@ -124,7 +124,7 @@ export function SignupForm({ internships }: Props) {
         <p className="success-kicker">You&apos;re locked in</p>
         <h2 className="success-title">We&apos;ll text you the second it opens.</h2>
         <p className="success-copy">
-          DropText is watching your list on a 1-second loop. The moment a
+          DropNoti is watching your list. The moment a
           listing flips open, your phone gets the alert — not five minutes later.
         </p>
         <ul className="success-list">

@@ -9,9 +9,9 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "DropText — Instant internship open alerts",
+  title: "DropNoti — Instant internship open alerts",
   description:
-    "DropText texts you the second an internship application opens. Name, phone, pick what to track — never miss a drop again.",
+    "DropNoti texts you the second an internship application opens. Name, phone, pick what to track — never miss a drop again.",
 };
 
 export default function RootLayout({

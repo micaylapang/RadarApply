@@ -1,4 +1,4 @@
-# DropText
+# DropNoti
 
 SMS alerts when internship applications open. Backend: **Supabase**. SMS: **Twilio**.
 
@@ -35,7 +35,7 @@ Locally, a built-in ~1s watch loop starts with the Next.js server.
 
 ## Test SMS
 
-1. Sign up with **DropText Demo** selected  
+1. Sign up with **DropNoti Demo** selected  
 2. Click **Send me a test text**
 
 ## Stack

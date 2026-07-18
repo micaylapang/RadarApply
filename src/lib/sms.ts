@@ -34,7 +34,7 @@ export function friendlySmsError(err: unknown): string {
     return "That phone isn’t verified in Twilio yet. Open Twilio Console → Phone Numbers → Verified Caller IDs and verify it.";
   }
   if (isTrialTemplateError(err)) {
-    return "Twilio trial blocked the message. Retry — DropText will use a trial template.";
+    return "Twilio trial blocked the message. Retry — DropNoti will use a trial template.";
   }
   const message = err instanceof Error ? err.message : "SMS failed";
   return message;
@@ -90,5 +90,5 @@ export function formatOpenAlert(opts: {
   applyUrl?: string | null;
 }) {
   const link = opts.applyUrl ? ` Apply: ${opts.applyUrl}` : "";
-  return `DropText: ${opts.company} — ${opts.title} just OPENED.${link} Go now.`;
+  return `DropNoti: ${opts.company} — ${opts.title} just OPENED.${link} Go now.`;
 }

@@ -58,7 +58,7 @@ export default async function Home() {
             🔥
           </span>
           <span className="brand-name">
-            Drop<span>Text</span>
+            Drop<span>Noti</span>
           </span>
         </a>
         <div className="nav-pill">1 min watch loop</div>
@@ -71,7 +71,7 @@ export default async function Home() {
               🔥
             </span>
             <span className="brand-name">
-              Drop<em>Text</em>
+              Drop<em>Noti</em>
             </span>
           </h1>
           <p className="hero-line">
@@ -110,7 +110,7 @@ export default async function Home() {
       </section>
 
       <footer className="footer">
-        <span>🔥 DropText — internship drops, instantly.</span>
+        <span>🔥 DropNoti — internship drops, instantly.</span>
         <span>
           {supabaseReady
             ? "Watch loop every ~1 min on Vercel · SMS via Twilio"

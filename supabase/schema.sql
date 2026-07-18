@@ -1,4 +1,4 @@
--- DropText schema for Supabase
+-- DropNoti schema for Supabase
 -- Run this in: Supabase Dashboard → SQL Editor → New query → Run
 
 create extension if not exists "pgcrypto";

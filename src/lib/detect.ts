@@ -6,7 +6,7 @@ async function fetchJson<T>(url: string, timeoutMs = 2500): Promise<T | null> {
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { Accept: "application/json", "User-Agent": "DropTextMonitor/1.0" },
+      headers: { Accept: "application/json", "User-Agent": "DropNotiMonitor/1.0" },
       cache: "no-store",
     });
     if (!res.ok) return null;
