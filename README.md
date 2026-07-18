@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DropText
 
-## Getting Started
+SMS alerts when internship applications open. Backend: **Supabase**. SMS: **Twilio**.
 
-First, run the development server:
+## Supabase setup
+
+1. Create a project at [https://supabase.com](https://supabase.com)
+2. Open **SQL Editor**, paste and run [`supabase/schema.sql`](supabase/schema.sql)
+3. Copy keys from **Project Settings → API** into `.env`
+4. Seed: `npm run db:seed`
+
+## Run locally
 
 ```bash
+npm install
+cp .env.example .env
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Locally, a built-in ~1s watch loop starts with the Next.js server.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy on Vercel (~1-minute watch)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Push the repo and import it in Vercel
+2. Add env vars from `.env` (including `CRON_SECRET`)
+3. Deploy — [`vercel.json`](vercel.json) defines `GET /api/cron/poll`
 
-## Learn More
+**Cron frequency**
+- **Vercel Pro:** every-minute cron in `vercel.json` works as written
+- **Vercel Hobby:** native cron is once/day max — use a free external ping instead, e.g. [cron-job.org](https://cron-job.org), hitting:
+  - URL: `https://YOUR_APP.vercel.app/api/cron/poll`
+  - Header: `Authorization: Bearer YOUR_CRON_SECRET`
+  - Schedule: every 1 minute
 
-To learn more about Next.js, take a look at the following resources:
+## Test SMS
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Sign up with **DropText Demo** selected  
+2. Click **Send me a test text**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Stack
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js App Router
+- Supabase Postgres
+- Twilio SMS
+- Greenhouse / Lever / Ashby board polling
+- Vercel Cron (production) / in-process loop (local)
