@@ -6,7 +6,7 @@ import {
   markSubscriptionAlerted,
   updateInternshipStatus,
 } from "@/lib/db";
-import { detectInternshipOpen } from "@/lib/detect";
+import { detectMany } from "@/lib/detect";
 import { formatOpenAlert, friendlySmsError, sendSms } from "@/lib/sms";
 
 /**
@@ -69,18 +69,42 @@ export async function notifySubscribers(internshipId: string, detectedAt: number
   return { sent, failed, errors, subscribers: subscriptions.length };
 }
 
-export async function pollOnce() {
+export type PollStats = {
+  roles: number;
+  boardsFetched: number;
+  opened: number;
+  closed: number;
+  elapsedMs: number;
+};
+
+/**
+ * One watch tick: fetch each unique board once, then update every role that
+ * shares it. Safe to call every minute from Vercel Cron / external ping.
+ */
+export async function pollOnce(): Promise<PollStats> {
+  const started = Date.now();
   const internships = await listInternships();
   const now = new Date().toISOString();
 
+  const detections = await detectMany(
+    internships.map((i) => ({
+      id: i.id,
+      sourceType: i.sourceType,
+      sourceKey: i.sourceKey,
+      titleFilter: i.titleFilter,
+      currentStatus: i.status,
+    })),
+  );
+
+  const boardKeys = new Set<string>();
+  let opened = 0;
+  let closed = 0;
+
   await Promise.all(
     internships.map(async (internship) => {
-      const result = await detectInternshipOpen({
-        sourceType: internship.sourceType,
-        sourceKey: internship.sourceKey,
-        titleFilter: internship.titleFilter,
-        currentStatus: internship.status,
-      });
+      const result = detections.get(internship.id);
+      if (!result) return;
+      if (result.boardKey) boardKeys.add(result.boardKey);
 
       if (result.skipped) {
         await updateInternshipStatus(internship.id, { lastChecked: now });
@@ -95,20 +119,28 @@ export async function pollOnce() {
         const detectedAt = Date.now();
         const applyUrl = result.jobs[0]?.absoluteUrl ?? internship.applyUrl;
 
+        // First sync: job was already live before we started watching — open it
+        // without claiming a drop timestamp.
+        if (isFirstCheck) {
+          await updateInternshipStatus(internship.id, {
+            status: "open",
+            lastChecked: now,
+            applyUrl: applyUrl ?? internship.applyUrl,
+          });
+          opened += 1;
+          console.log(
+            `[monitor] synced open (no alert): ${internship.company} — ${internship.title}`,
+          );
+          return;
+        }
+
         await updateInternshipStatus(internship.id, {
           status: "open",
           openedAt: now,
           lastChecked: now,
           applyUrl: applyUrl ?? internship.applyUrl,
         });
-
-        // First sync only — don't SMS for jobs that were already open before RadarApply started
-        if (isFirstCheck) {
-          console.log(
-            `[monitor] synced open (no alert): ${internship.company} — ${internship.title}`,
-          );
-          return;
-        }
+        opened += 1;
 
         console.log(
           `[monitor] OPEN detected: ${internship.company} — ${internship.title}`,
@@ -120,9 +152,22 @@ export async function pollOnce() {
           openedAt: null,
           lastChecked: now,
         });
+        closed += 1;
       } else {
-        await updateInternshipStatus(internship.id, { lastChecked: now });
+        const liveApply = result.jobs[0]?.absoluteUrl;
+        await updateInternshipStatus(internship.id, {
+          lastChecked: now,
+          ...(isOpen && liveApply ? { applyUrl: liveApply } : {}),
+        });
       }
     }),
   );
+
+  return {
+    roles: internships.length,
+    boardsFetched: boardKeys.size,
+    opened,
+    closed,
+    elapsedMs: Date.now() - started,
+  };
 }

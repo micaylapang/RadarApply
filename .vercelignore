@@ -1,0 +1,7 @@
+.cursor
+.git
+node_modules
+.next
+.env.local
+*.tgz
+.DS_Store

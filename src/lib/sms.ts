@@ -1,4 +1,5 @@
 import twilio from "twilio";
+import { isDirectApplyUrl } from "@/lib/apply-url";
 
 function getClient() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -31,10 +32,10 @@ function isUnverifiedRecipientError(err: unknown) {
 
 export function friendlySmsError(err: unknown): string {
   if (isUnverifiedRecipientError(err)) {
-    return "That phone isn’t verified in Twilio yet. Open Twilio Console → Phone Numbers → Verified Caller IDs and verify it.";
+    return "Twilio couldn’t deliver to that number. Check the number format and your Twilio Messaging / A2P setup.";
   }
   if (isTrialTemplateError(err)) {
-    return "Twilio trial blocked the message. Retry — RadarApply will use a trial template.";
+    return "Twilio blocked the message body. Confirm the account is upgraded and TWILIO_TRIAL_MODE=false.";
   }
   const message = err instanceof Error ? err.message : "SMS failed";
   return message;
@@ -89,6 +90,26 @@ export function formatOpenAlert(opts: {
   title: string;
   applyUrl?: string | null;
 }) {
-  const link = opts.applyUrl ? ` Apply: ${opts.applyUrl}` : "";
-  return `RadarApply: ${opts.company} — ${opts.title} just OPENED.${link} Go now.`;
+  const link =
+    opts.applyUrl && isDirectApplyUrl(opts.applyUrl)
+      ? ` Apply: ${opts.applyUrl}`
+      : "";
+  const title = /summer\s*2027/i.test(opts.title)
+    ? opts.title
+    : `${opts.title} (Summer 2027)`;
+  return `RadarApply: ${opts.company} — ${title} just OPENED.${link} Go now.`;
+}
+
+export function firstNameFrom(fullName: string): string {
+  const part = fullName.trim().split(/\s+/)[0];
+  return part || "there";
+}
+
+export function formatWelcomeSms(fullName: string): string {
+  const first = firstNameFrom(fullName);
+  return [
+    `Congrats ${first}, you're signed up for alerts from RadarApply 🚨`,
+    `Save this number and be on the lookout for texts from us!`,
+    `Get ready to bag that internship 💰`,
+  ].join("\n");
 }

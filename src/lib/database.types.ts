@@ -18,6 +18,10 @@ export type UserRow = {
   id: string;
   name: string;
   phone: string;
+  password_hash: string | null;
+  season_pass_expires_at: string | null;
+  stripe_customer_id: string | null;
+  stripe_checkout_session_id: string | null;
   created_at: string;
 };
 
@@ -40,6 +44,16 @@ export type AlertRow = {
   created_at: string;
 };
 
+export type LoginCodeRow = {
+  id: string;
+  phone: string;
+  code_hash: string;
+  attempts: number;
+  expires_at: string;
+  consumed_at: string | null;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -49,12 +63,20 @@ export type Database = {
           id?: string;
           name: string;
           phone: string;
+          password_hash?: string | null;
+          season_pass_expires_at?: string | null;
+          stripe_customer_id?: string | null;
+          stripe_checkout_session_id?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
           phone?: string;
+          password_hash?: string | null;
+          season_pass_expires_at?: string | null;
+          stripe_customer_id?: string | null;
+          stripe_checkout_session_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -131,6 +153,28 @@ export type Database = {
           body?: string;
           status?: string;
           latency_ms?: number | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      login_codes: {
+        Row: LoginCodeRow;
+        Insert: {
+          id?: string;
+          phone: string;
+          code_hash: string;
+          attempts?: number;
+          expires_at: string;
+          consumed_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          phone?: string;
+          code_hash?: string;
+          attempts?: number;
+          expires_at?: string;
+          consumed_at?: string | null;
           created_at?: string;
         };
         Relationships: [];

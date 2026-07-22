@@ -1,83 +1,67 @@
-import { SignupForm } from "@/components/SignupForm";
-import { INTERNSHIP_CATALOG } from "@/lib/internships";
+import { AboutSection } from "@/components/AboutSection";
+import { FaqSection } from "@/components/FaqSection";
+import { HeroActions } from "@/components/HeroActions";
+import { LogoMarquee } from "@/components/LogoMarquee";
+import { SiteFooter } from "@/components/SiteFooter";
+import { SiteNav } from "@/components/SiteNav";
+import { TestimonialsSection } from "@/components/TestimonialsSection";
+import { TextPreview } from "@/components/TextPreview";
+import { getSessionUserId } from "@/lib/session";
 
-// Fast first paint — do not block the page on Supabase
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
-const catalogInternships = INTERNSHIP_CATALOG.map((item, i) => ({
-  id: `catalog-${i}`,
-  company: item.company,
-  title: item.title,
-  slug: item.slug,
-  description: item.description,
-  status: "closed",
-  sourceType: item.sourceType,
-}));
+export default async function Home() {
+  const userId = await getSessionUserId();
+  const loggedIn = Boolean(userId);
 
-export default function Home() {
   return (
     <div className="page">
-      <nav className="nav">
-        <a className="brand" href="/">
-          <span className="brand-fire" aria-hidden="true">
-            🔥
-          </span>
-          <span className="brand-name">
-            Radar<span>Apply</span>
-          </span>
-        </a>
-        <div className="nav-pill">1 min watch loop</div>
-      </nav>
+      <SiteNav active="home" initialLoggedIn={loggedIn} />
 
       <header className="hero">
-        <div className="hero-copy">
-          <h1 className="hero-brand">
-            <span className="hero-fire" aria-hidden="true">
-              🔥
-            </span>
-            <span className="brand-name">
-              Radar<em>Apply</em>
-            </span>
-          </h1>
-          <p className="hero-line">
-            Get instant texts when internships on your radar open.
-          </p>
-          <div className="hero-actions">
-            <a className="btn-primary" href="#signup">
-              Start tracking
-            </a>
-            <a className="btn-ghost" href="#how">
-              How it works
-            </a>
+        <div className="hero-top">
+          <div className="hero-alerts">
+            <TextPreview />
+          </div>
+          <div className="hero-visual">
+            <div className="radar" aria-hidden="true">
+              <span className="radar-blip" />
+              <span className="radar-blip" />
+              <span className="radar-blip" />
+            </div>
+            <div className="radar-meta">
+              <p className="radar-caption">Signal&nbsp;→&nbsp;SMS&nbsp;alert</p>
+              <div className="radar-pill">1 min watch loop</div>
+            </div>
           </div>
         </div>
 
-        <div className="hero-visual" aria-hidden="true">
-          <div className="radar">
-            <span className="radar-blip" />
-            <span className="radar-blip" />
-            <span className="radar-blip" />
+        <div className="hero-copy">
+          <div className="hero-brand-row">
+            <h1 className="hero-brand">
+              <span className="hero-fire" aria-hidden="true">
+                🚨
+              </span>
+              <span className="brand-name">
+                Radar<em>Apply</em>
+              </span>
+            </h1>
+            <HeroActions initialLoggedIn={loggedIn} />
           </div>
-          <p className="radar-caption">Signal → SMS</p>
+          <LogoMarquee />
+          <p className="hero-line">
+            the fastest job alert system on the internet.
+          </p>
         </div>
       </header>
 
-      <section className="section" id="how">
-        <div className="section-head">
-          <h2>Be the first to apply</h2>
-          <p>
-            Enter your name and number, then pick every internship you care
-            about. Our monitor polls career boards and fires SMS the instant a
-            listing goes live.
-          </p>
-        </div>
-        <SignupForm initialInternships={catalogInternships} />
-      </section>
+      <AboutSection />
 
-      <footer className="footer">
-        <span>© RadarApply 2026</span>
-        <span>Watch loop every ~1 min</span>
-      </footer>
+      <TestimonialsSection />
+
+      <FaqSection />
+
+      <SiteFooter />
     </div>
   );
 }

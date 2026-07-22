@@ -29,19 +29,16 @@ Locally, a built-in ~1s watch loop starts with the Next.js server.
 **Cron frequency**
 - **Vercel Pro:** every-minute cron in `vercel.json` works as written
 - **Vercel Hobby:** native cron is once/day max — use a free external ping instead, e.g. [cron-job.org](https://cron-job.org), hitting:
-  - URL: `https://YOUR_APP.vercel.app/api/cron/poll`
+  - URL: `https://www.radarapply.com/api/cron/poll`
   - Header: `Authorization: Bearer YOUR_CRON_SECRET`
   - Schedule: every 1 minute
 
-## Test SMS
-
-1. Sign up with **RadarApply Demo** selected  
-2. Click **Send me a test text**
+Each tick fetches **each unique board once** (Greenhouse / Lever / Ashby / Amazon) and applies every role filter in memory — so 8 Akuna watches = 1 HTTP call, not 8.
 
 ## Stack
 
 - Next.js App Router
 - Supabase Postgres
 - Twilio SMS
-- Greenhouse / Lever / Ashby board polling
+- Greenhouse / Lever / Ashby board polling (deduped per tick)
 - Vercel Cron (production) / in-process loop (local)

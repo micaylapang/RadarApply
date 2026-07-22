@@ -16,6 +16,7 @@ export async function GET() {
         description: item.description,
         status: "closed",
         applyUrl: item.applyUrl,
+        openedAt: null,
         sourceType: item.sourceType,
       })),
       warning: "Supabase not configured",
@@ -33,6 +34,7 @@ export async function GET() {
         description: i.description,
         status: i.status,
         applyUrl: i.applyUrl,
+        openedAt: i.openedAt,
         sourceType: i.sourceType,
       })),
     });

@@ -1,0 +1,22 @@
+---
+description: Every tracked company must have a logo; never invent open dates.
+alwaysApply: true
+---
+
+# Company logos + verified dates
+
+When adding or renaming a company in the internship catalog:
+
+1. Always add an entry in `src/lib/company-logos.ts` in the same change.
+2. Prefer a file under `public/logos/{slug}.svg` (or `.png`) and set `src: "/logos/..."`.
+3. Use **official brand colors** (Simple Icons `hex`, or multicolor marks for Google / Microsoft / Figma / TikTok). Near-black brand marks may use white only when needed for contrast on the dark UI — never leave everything washed to `#F7F2F0`.
+4. Do not ship label-only logo entries — `companyLogoUrl(company)` must resolve to a real image URL.
+5. Also update `COMPANY_CATEGORIES` and `COMPANY_DROP_STATUS` when adding a company.
+6. After catalog changes, run `npm run db:seed` (asserts logo coverage).
+
+## Open dates
+
+- When the monitor sees a **closed → open** flip on a role we were already watching, set `opened_at` and show **opened [date], N days since open**.
+- Do not set `opened_at` on first sync of jobs that were already live, or on seed of curated-open roles.
+- `VERIFIED_OPENED_AT` overrides monitor time when a human confirms a better date (e.g. Akuna).
+- Do not invent historical last-year dates for countdowns.

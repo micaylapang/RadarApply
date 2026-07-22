@@ -26,10 +26,13 @@ export async function GET(request: Request) {
 
   const started = Date.now();
   try {
-    await pollOnce();
+    const stats = await pollOnce();
+    console.log(
+      `[cron/poll] roles=${stats.roles} boards=${stats.boardsFetched} opened=${stats.opened} closed=${stats.closed} ${stats.elapsedMs}ms`,
+    );
     return NextResponse.json({
       ok: true,
-      elapsedMs: Date.now() - started,
+      ...stats,
     });
   } catch (err) {
     console.error("[cron/poll]", err);

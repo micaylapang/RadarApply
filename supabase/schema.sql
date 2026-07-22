@@ -7,6 +7,9 @@ create table if not exists users (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   phone text not null unique,
+  season_pass_expires_at timestamptz,
+  stripe_customer_id text,
+  stripe_checkout_session_id text,
   created_at timestamptz not null default now()
 );
 
@@ -50,12 +53,41 @@ create index if not exists subscriptions_internship_id_idx on subscriptions (int
 create index if not exists subscriptions_user_id_idx on subscriptions (user_id);
 create index if not exists alerts_internship_id_idx on alerts (internship_id);
 
+-- Phone OTP login codes (hashed; short-lived)
+create table if not exists login_codes (
+  id uuid primary key default gen_random_uuid(),
+  phone text not null,
+  code_hash text not null,
+  attempts int not null default 0,
+  expires_at timestamptz not null,
+  consumed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists login_codes_phone_created_idx
+  on login_codes (phone, created_at desc);
+
 -- Server uses the service role key (bypasses RLS).
 -- Keep RLS on so the anon key cannot read/write directly from the browser.
 alter table users enable row level security;
 alter table internships enable row level security;
 alter table subscriptions enable row level security;
 alter table alerts enable row level security;
+alter table login_codes enable row level security;
+
+-- Company add requests (signup “request a company” form)
+create table if not exists company_requests (
+  id uuid primary key default gen_random_uuid(),
+  company text not null,
+  roles text,
+  contact text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists company_requests_created_at_idx
+  on company_requests (created_at desc);
+
+alter table company_requests enable row level security;
 
 -- Public read of internship catalog (optional; signup still goes through Next.js API)
 create policy "Public can read internships"
