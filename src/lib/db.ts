@@ -681,7 +681,7 @@ export async function upsertInternshipCatalogItem(item: {
 
   const { error } = await supabase
     .from("internships")
-    .upsert(full as typeof full, { onConflict: "slug" });
+    .upsert(full, { onConflict: "slug" });
 
   if (!error) return;
 
@@ -693,14 +693,14 @@ export async function upsertInternshipCatalogItem(item: {
 
     const retry = await supabase
       .from("internships")
-      .upsert(stripped, { onConflict: "slug" });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .upsert(stripped as any, { onConflict: "slug" });
     if (retry.error) {
       // Still failing on the other optional column.
       if (isMissingColumnError(retry.error, ["managed_by", "logo_url"])) {
-        const coreOnly = { ...core } as Record<string, unknown>;
         const last = await supabase
           .from("internships")
-          .upsert(coreOnly, { onConflict: "slug" });
+          .upsert(core, { onConflict: "slug" });
         if (last.error) throw last.error;
         return;
       }

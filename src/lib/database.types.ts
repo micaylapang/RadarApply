@@ -110,6 +110,7 @@ export type Database = {
           opened_at?: string | null;
           last_checked?: string | null;
           managed_by?: string;
+          logo_url?: string | null;
           created_at?: string;
         };
         Update: {
@@ -126,6 +127,7 @@ export type Database = {
           opened_at?: string | null;
           last_checked?: string | null;
           managed_by?: string;
+          logo_url?: string | null;
           created_at?: string;
         };
         Relationships: [];
