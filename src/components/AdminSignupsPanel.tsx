@@ -531,7 +531,8 @@ export function AdminSignupsPanel() {
           Approve (✓) checks if each role is already open: open → Apply Now,
           otherwise → monitor list. Leave roles blank to auto-scan the careers
           page / ATS for internship roles. Roles already in the catalog are
-          skipped. Reject (✕) dismisses the request.
+          skipped (including near-duplicates like SWE vs Software Engineer).
+          Reject (✕) dismisses the request.
         </p>
 
         <div className="admin-import">

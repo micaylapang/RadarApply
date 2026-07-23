@@ -55,6 +55,127 @@ export function companyRoleFamilyKey(company: string, title: string): string {
   return `${company.trim().toLowerCase()}::${roleFamilyTitle(title).toLowerCase()}`;
 }
 
+/** Whole-token expansions for common internship abbreviations. */
+const ROLE_ABBREVIATIONS: Record<string, string> = {
+  swe: "software engineer",
+  sde: "software engineer",
+  sw: "software",
+  pm: "product manager",
+  apm: "associate product manager",
+  tpm: "technical program manager",
+  pgm: "program manager",
+  ml: "machine learning",
+  ai: "artificial intelligence",
+  ds: "data science",
+  de: "data engineer",
+  da: "data analyst",
+  qa: "quality assurance",
+  qe: "quality engineer",
+  ux: "user experience",
+  ui: "user interface",
+  hw: "hardware",
+  fw: "firmware",
+  emb: "embedded",
+  sre: "site reliability engineer",
+  it: "information technology",
+  hr: "human resources",
+  fdse: "forward deployed software engineer",
+  fds: "forward deployed",
+};
+
+const ROLE_NOISE =
+  /\b(?:intern(?:ship)?s?|co-?ops?|undergraduate|undergrads?|university|new\s*grads?|campus|fellow(?:ship)?s?|summer|fall|spring|winter|20\d{2}|usa?|united\s+states|remote|hybrid)\b/gi;
+
+function expandRoleAbbreviations(text: string): string {
+  return text
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((token) => ROLE_ABBREVIATIONS[token] ?? token)
+    .join(" ");
+}
+
+/**
+ * Canonical form for comparing whether two role titles are the "same" job.
+ * Strips season/location noise, expands SWE/PM/etc., and normalizes
+ * engineer↔engineering / manager↔management style variants.
+ */
+export function normalizeRoleMatchKey(title: string): string {
+  let text = roleFamilyTitle(title)
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9+#.\s]/g, " ");
+
+  text = text.replace(ROLE_NOISE, " ");
+  text = expandRoleAbbreviations(text.replace(/\s+/g, " ").trim());
+
+  text = text
+    .replace(/\bengineering\b/g, "engineer")
+    .replace(/\bmanagement\b/g, "manager")
+    .replace(/\bmanagers\b/g, "manager")
+    .replace(/\bengineers\b/g, "engineer")
+    .replace(/\bdesigners?\b/g, "design")
+    .replace(/\bscientists?\b/g, "science")
+    .replace(/\banalytics\b/g, "analyst")
+    .replace(/\banalysts?\b/g, "analyst")
+    .replace(/\bresearchers?\b/g, "research")
+    .replace(/\bdevelopers?\b/g, "develop")
+    .replace(/\bdevelopment\b/g, "develop")
+    .replace(/\bprogrammers?\b/g, "program")
+    .replace(/\bprogramming\b/g, "program");
+
+  // Re-expand in case abbreviations produced multi-word phrases that need stemming.
+  text = expandRoleAbbreviations(text);
+  text = text
+    .replace(/\bengineering\b/g, "engineer")
+    .replace(/\bmanagement\b/g, "manager");
+
+  const tokens = text
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .sort();
+
+  return tokens.join(" ");
+}
+
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  const prev = new Array<number>(b.length + 1);
+  const curr = new Array<number>(b.length + 1);
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+    }
+    for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
+  }
+  return prev[b.length];
+}
+
+/**
+ * True when titles describe the same role despite typos / wording differences
+ * (e.g. SWE vs Software Engineer, Engineering vs Engineer, Sofware typo).
+ */
+export function rolesAreNearDuplicate(a: string, b: string): boolean {
+  const ka = normalizeRoleMatchKey(a);
+  const kb = normalizeRoleMatchKey(b);
+  if (!ka || !kb) return false;
+  if (ka === kb) return true;
+
+  const dist = levenshtein(ka, kb);
+  const maxLen = Math.max(ka.length, kb.length);
+  // Allow small typos; keep threshold tight so Product Manager ≠ Program Manager.
+  const allowed = Math.min(3, Math.max(1, Math.floor(maxLen * 0.12)));
+  return dist <= allowed;
+}
+
 /**
  * Keep the first occurrence of each company + base role title.
  * Prevents duplicate alert rows when multiple internship IDs map to the same role.

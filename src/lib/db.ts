@@ -6,7 +6,11 @@ import {
   type UserRow,
 } from "@/lib/database.types";
 import { buildAndCheckRequestCatalogItems } from "@/lib/company-request-approve";
-import { companyRoleFamilyKey, dedupeByCompanyRole } from "@/lib/role-meta";
+import {
+  companyRoleFamilyKey,
+  dedupeByCompanyRole,
+  rolesAreNearDuplicate,
+} from "@/lib/role-meta";
 
 const USER_SELECT_FULL =
   "id, name, phone, created_at, season_pass_expires_at, stripe_customer_id, stripe_checkout_session_id";
@@ -728,7 +732,10 @@ function companyNamesMatch(a: string, b: string) {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
-/** True when catalog already has this company + role family (or exact slug). */
+/**
+ * True when catalog already has this company + role (exact slug, same family,
+ * or near-duplicate title: SWE≈Software Engineer, typos, engineer≈engineering).
+ */
 function isDuplicateCatalogRole(
   existing: Internship[],
   item: { company: string; title: string; slug: string },
@@ -737,7 +744,8 @@ function isDuplicateCatalogRole(
   return existing.some((row) => {
     if (!companyNamesMatch(row.company, item.company)) return false;
     if (row.slug === item.slug) return true;
-    return companyRoleFamilyKey(row.company, row.title) === familyKey;
+    if (companyRoleFamilyKey(row.company, row.title) === familyKey) return true;
+    return rolesAreNearDuplicate(row.title, item.title);
   });
 }
 
