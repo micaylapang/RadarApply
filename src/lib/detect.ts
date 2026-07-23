@@ -98,7 +98,22 @@ async function fetchJson<T>(url: string, timeoutMs = 8000): Promise<T | null> {
 
 function matchesFilter(title: string, filter: string | null | undefined) {
   if (!filter) return true;
-  return title.toLowerCase().includes(filter.toLowerCase());
+  const t = title.toLowerCase().trim();
+  const f = filter.toLowerCase().trim();
+  if (!f) return true;
+  // Specific role titles (often with a team suffix) must match as a whole title
+  // prefix — avoids "…Intern, Implant" also hitting "Embedded … Implant…".
+  if (f.includes(",") || f.length >= 28) {
+    return (
+      t === f ||
+      t.startsWith(`${f} `) ||
+      t.startsWith(`${f},`) ||
+      t.startsWith(`${f} -`) ||
+      t.startsWith(`${f} —`) ||
+      t.startsWith(`${f} –`)
+    );
+  }
+  return t.includes(f);
 }
 
 function isInternshipTitle(title: string) {
@@ -110,8 +125,9 @@ function isTargetRole(title: string, sourceKey?: string | null) {
   if (!isInternshipTitle(title)) return false;
   if (matchesSummer2027(title)) return true;
 
-  // Neuralink / Kalshi post year-round US intern roles without a season/year.
-  if (sourceKey === "neuralink" || sourceKey === "kalshi") {
+  // Kalshi posts year-round US intern roles without a season/year.
+  // Neuralink is Fall 2026 only — do not treat as Summer 2027 open.
+  if (sourceKey === "kalshi") {
     if (roleSeason(title)) return false;
     const years = roleYears(title);
     return years.length === 0 || years.includes(TARGET_YEAR);
