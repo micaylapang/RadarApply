@@ -7,7 +7,7 @@ import {
   upsertSubscriptions,
   upsertUser,
 } from "@/lib/db";
-import { sendNewSignupEmail } from "@/lib/email";
+import { emailConfigured, sendNewSignupEmail } from "@/lib/email";
 import { appendSignupToGoogleSheet } from "@/lib/google-sheets";
 import { FREE_COMPANY_LIMIT, MONETIZATION_ENABLED, UPGRADE_PATH } from "@/lib/limits";
 import { notifySubscribers } from "@/lib/notify";
@@ -130,6 +130,8 @@ export async function POST(request: Request) {
       }
     }
 
+    let signupEmailSent = false;
+
     try {
       const alerts = dedupeByCompanyRole(
         internships.map((i) => ({
@@ -137,15 +139,20 @@ export async function POST(request: Request) {
           title: i.title,
         })),
       );
-      try {
-        await sendNewSignupEmail({
-          name: user.name,
-          phone: user.phone,
-          alerts,
-          isNewUser,
-        });
-      } catch (err) {
-        console.error("[signup] notify email", err);
+      // Email only for brand-new accounts — not when someone adds more roles.
+      // Server sends via Resend when configured; otherwise the browser sends once.
+      if (isNewUser && emailConfigured()) {
+        try {
+          await sendNewSignupEmail({
+            name: user.name,
+            phone: user.phone,
+            alerts,
+            isNewUser: true,
+          });
+          signupEmailSent = true;
+        } catch (err) {
+          console.error("[signup] notify email", err);
+        }
       }
       try {
         await appendSignupToGoogleSheet({
@@ -168,6 +175,8 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({
       ok: true,
+      isNewUser,
+      emailSent: signupEmailSent,
       user: {
         id: user.id,
         name: user.name,

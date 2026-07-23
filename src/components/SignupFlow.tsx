@@ -311,7 +311,6 @@ export function SignupFlow({
 
   const filteredCompanies = useMemo(() => {
     const available = grouped.filter(([company, roles]) => {
-      if (selectedByCompany.has(company)) return false;
       if (!companyHasTrackableRoles(company, roles)) return false;
       return true;
     });
@@ -325,7 +324,7 @@ export function SignupFlow({
           role.slug.toLowerCase().includes(q),
       );
     });
-  }, [grouped, companyQuery, selectedByCompany]);
+  }, [grouped, companyQuery]);
 
   const companyRoles = useMemo(() => {
     if (!activeCompany) return [];
@@ -381,32 +380,81 @@ export function SignupFlow({
     !hasSeasonPass &&
     trackedCompanies.size >= FREE_COMPANY_LIMIT;
 
+  function syncRoleKeysForCompany(company: string, base: Set<string>) {
+    const roles = internships.filter(
+      (i) => i.company === company && isRoleTrackable(company, i),
+    );
+    return new Set(
+      roles.filter((r) => base.has(r.id)).map((r) => roleBaseTitle(r.title)),
+    );
+  }
+
   function openCompany(company: string) {
     if (
       MONETIZATION_ENABLED &&
       !hasSeasonPass &&
       !trackedCompanies.has(company) &&
-      trackedCompanies.size >= FREE_COMPANY_LIMIT
+      trackedCompanies.size >= FREE_COMPANY_LIMIT &&
+      !selectedByCompany.has(company)
     ) {
       window.location.assign(`${UPGRADE_PATH}?reason=limit`);
       return;
     }
 
-    setActiveCompany(company);
     setError(null);
 
+    // Toggle accordion on the company list (no separate roles page).
+    if (activeCompany === company && step === "company") {
+      setActiveCompany(null);
+      setRoleKeys(new Set());
+      return;
+    }
+
+    setActiveCompany(company);
+    setRoleKeys(syncRoleKeysForCompany(company, selected));
+    if (step !== "company") setStep("company");
+  }
+
+  function applyRoleKeysToCompany(company: string, keys: Set<string>) {
     const roles = internships.filter(
       (i) => i.company === company && isRoleTrackable(company, i),
     );
-    const existingIds = roles.filter((r) => selected.has(r.id));
-    if (existingIds.length > 0) {
-      setRoleKeys(
-        new Set(existingIds.map((r) => roleBaseTitle(r.title))),
-      );
-    } else {
-      setRoleKeys(new Set());
+    const next = buildSelectionForCompany(selected, roles, keys);
+    const nextCompanies = internships
+      .filter((i) => next.has(i.id))
+      .map((i) => i.company);
+    if (
+      MONETIZATION_ENABLED &&
+      wouldExceedFreeCompanyLimit({
+        existingCompanies: trackedCompanies,
+        nextCompanies: [...trackedCompanies, ...nextCompanies],
+        hasPass: hasSeasonPass,
+      })
+    ) {
+      window.location.assign(`${UPGRADE_PATH}?reason=limit`);
+      return;
     }
-    setStep("roles");
+    setRoleKeys(keys);
+    setSelected(next);
+    setError(null);
+  }
+
+  function toggleRoleKeyInline(key: string) {
+    if (!activeCompany) return;
+    const nextKeys = new Set(roleKeys);
+    if (nextKeys.has(key)) nextKeys.delete(key);
+    else nextKeys.add(key);
+    applyRoleKeysToCompany(activeCompany, nextKeys);
+  }
+
+  function toggleSelectAllInline(keys: string[]) {
+    if (!activeCompany) return;
+    const allSelected =
+      roleKeys.size === keys.length && keys.length > 0;
+    applyRoleKeysToCompany(
+      activeCompany,
+      allSelected ? new Set() : new Set(keys),
+    );
   }
 
   async function submitCompanyRequest(e: FormEvent) {
@@ -572,6 +620,8 @@ export function SignupFlow({
         error?: string;
         loginRequired?: boolean;
         upgradeRequired?: boolean;
+        isNewUser?: boolean;
+        emailSent?: boolean;
         tracking?: Array<{ company: string; title: string }>;
         user?: { hasSeasonPass?: boolean };
       };
@@ -602,13 +652,15 @@ export function SignupFlow({
           title: t.title,
         })),
       );
-      // Server FormSubmit is Cloudflare-blocked on Vercel — notify from browser.
-      void notifySignupFromBrowser({
-        name: name.trim(),
-        phone: phone.trim(),
-        alerts,
-        isNewUser: tracking.length === 0,
-      });
+      // One signup email: browser FormSubmit only when server did not send (Resend).
+      if (data.isNewUser && !data.emailSent) {
+        void notifySignupFromBrowser({
+          name: name.trim(),
+          phone: phone.trim(),
+          alerts,
+          isNewUser: true,
+        });
+      }
 
       setSelected(internshipIds);
       setTracking(alerts);
@@ -651,16 +703,37 @@ export function SignupFlow({
     }
 
     setSelected(next);
+    setRoleKeys(new Set());
+    setActiveCompany(null);
+    setError(null);
+    // Stay on company list so more firms can be added before one submit.
+    setStep("company");
+  }
+
+  function removeCompanySelection(company: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const item of internships) {
+        if (item.company === company) next.delete(item.id);
+      }
+      return next;
+    });
+    setError(null);
+  }
+
+  async function continueFromCompanyList() {
+    if (companiesTracked.length === 0) {
+      setError("Add at least one company first.");
+      return;
+    }
     setError(null);
 
-    // Already signed up — save and return to confirmation.
-    if (tracking.length > 0) {
-      await finishSignup(next);
+    // Logged-in / returning users already have contact + consent.
+    if (name.trim() && phone.trim() && smsConsent) {
+      await finishSignup(selected);
       return;
     }
 
-    // First company picked — collect phone next.
-    setActiveCompany(null);
     setStep("contact");
   }
 
@@ -828,7 +901,28 @@ export function SignupFlow({
           </section>
         ) : (
           <section className="signup-pick">
-            <h2>Positions</h2>
+            <div className="signup-pick-head">
+              <h2>Positions</h2>
+              {uniqueRoleKeys.length > 1 ? (
+                <button
+                  type="button"
+                  className="role-select-all-btn"
+                  onClick={() => {
+                    const allSelected =
+                      roleKeys.size === uniqueRoleKeys.length &&
+                      uniqueRoleKeys.length > 0;
+                    setRoleKeys(
+                      allSelected ? new Set() : new Set(uniqueRoleKeys),
+                    );
+                  }}
+                >
+                  {roleKeys.size === uniqueRoleKeys.length &&
+                  uniqueRoleKeys.length > 0
+                    ? "Clear all"
+                    : "Select all"}
+                </button>
+              ) : null}
+            </div>
             <div className="chip-grid">
               {uniqueRoleKeys.map((key) => {
                 const active = roleKeys.has(key);
@@ -845,32 +939,6 @@ export function SignupFlow({
                 );
               })}
             </div>
-            {uniqueRoleKeys.length > 1 ? (
-              <label className="role-select-all">
-                <input
-                  type="checkbox"
-                  checked={
-                    roleKeys.size === uniqueRoleKeys.length &&
-                    uniqueRoleKeys.length > 0
-                  }
-                  ref={(el) => {
-                    if (el) {
-                      el.indeterminate =
-                        roleKeys.size > 0 &&
-                        roleKeys.size < uniqueRoleKeys.length;
-                    }
-                  }}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setRoleKeys(new Set(uniqueRoleKeys));
-                    } else {
-                      setRoleKeys(new Set());
-                    }
-                  }}
-                />
-                <span>Select all</span>
-              </label>
-            ) : null}
           </section>
         )}
 
@@ -891,7 +959,7 @@ export function SignupFlow({
             onClick={applyCompanySelection}
             disabled={loading}
           >
-            {loading ? "Saving…" : "Continue"}
+            {loading ? "Saving…" : "Add to list"}
           </button>
         )}
       </div>
@@ -905,8 +973,6 @@ export function SignupFlow({
           type="button"
           className="signup-back"
           onClick={() => {
-            // Drop in-progress picks so the first signup stays one company at a time.
-            setSelected(new Set());
             setRoleKeys(new Set());
             setActiveCompany(null);
             setError(null);
@@ -1031,7 +1097,6 @@ export function SignupFlow({
             setStep("success");
             return;
           }
-          // Leave signup and return to the main page.
           window.location.assign("/");
         }}
       >
@@ -1041,40 +1106,14 @@ export function SignupFlow({
         <h1>
           {hasExistingTracking
             ? "Track more companies"
-            : "Choose your first company to track"}
+            : "Choose companies to track"}
         </h1>
         <p className="signup-flow-sub">
           {hasExistingTracking
-            ? "Pick another company to add to your alerts."
-            : "You can add more after you sign up."}
+            ? "Tap a company to pick roles. Add as many as you want, then save once."
+            : "Tap a company to pick roles, then continue once."}
         </p>
       </div>
-
-      {companiesTracked.length > 0 ? (
-        <ul className="signup-summary">
-          {companiesTracked.map((company) => (
-            <li key={company}>
-              <CompanyLogo company={company} />
-              <span>
-                {company}
-                <em>
-                  {selectedByCompany.get(company)}{" "}
-                  {(selectedByCompany.get(company) ?? 0) === 1
-                    ? "position"
-                    : "positions"}
-                </em>
-              </span>
-              <button
-                type="button"
-                className="signup-summary-edit"
-                onClick={() => openCompany(company)}
-              >
-                Edit
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
 
       <label className="company-search">
         <span className="sr-only">Search companies</span>
@@ -1097,25 +1136,93 @@ export function SignupFlow({
           <p className="company-empty">
             {companyQuery.trim()
               ? `No companies match “${companyQuery.trim()}”.`
-              : companiesTracked.length > 0
-                ? "You’ve added every waiting company. Open roles are under Apply Now."
-                : "No companies available."}
+              : "No companies available."}
           </p>
         ) : (
-          filteredCompanies.map(([company]) => (
-              <div key={company} className="company-row">
+          filteredCompanies.map(([company, roles]) => {
+            const isOpen = activeCompany === company;
+            const count = selectedByCompany.get(company) ?? 0;
+            const trackable = roles.filter((role) =>
+              isRoleTrackable(company, role),
+            );
+            const keys: string[] = [];
+            const seen = new Set<string>();
+            for (const role of trackable) {
+              const key = roleBaseTitle(role.title);
+              if (seen.has(key)) continue;
+              seen.add(key);
+              keys.push(key);
+            }
+
+            return (
+              <div
+                key={company}
+                className={`company-row${isOpen ? " is-open" : ""}${
+                  count > 0 ? " has-selection" : ""
+                }`}
+              >
                 <button
                   type="button"
                   className="company-toggle"
                   onClick={() => openCompany(company)}
+                  aria-expanded={isOpen}
                 >
                   <span className="company-toggle-left">
                     <CompanyLogo company={company} />
-                    <span className="company-toggle-name">{company}</span>
+                    <span className="company-toggle-text">
+                      <span className="company-toggle-name">{company}</span>
+                    </span>
+                  </span>
+                  <span className="company-toggle-meta">
+                    {count > 0 ? (
+                      <span className="company-count">
+                        {count} {count === 1 ? "role" : "roles"}
+                      </span>
+                    ) : null}
+                    <span className="company-chevron" aria-hidden="true" />
                   </span>
                 </button>
+                {isOpen ? (
+                  <div className="role-menu">
+                    {keys.length > 1 ? (
+                      <label className="role-all">
+                        <input
+                          type="checkbox"
+                          checked={
+                            roleKeys.size === keys.length && keys.length > 0
+                          }
+                          ref={(el) => {
+                            if (el) {
+                              el.indeterminate =
+                                roleKeys.size > 0 &&
+                                roleKeys.size < keys.length;
+                            }
+                          }}
+                          onChange={() => toggleSelectAllInline(keys)}
+                        />
+                        <span>Select all</span>
+                      </label>
+                    ) : null}
+                    {keys.map((key) => {
+                      const active = roleKeys.has(key);
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          className={`role-item${active ? " is-active" : ""}`}
+                          onClick={() => toggleRoleKeyInline(key)}
+                          aria-pressed={active}
+                        >
+                          <span className="role-check" aria-hidden="true" />
+                          <span className="role-title">{key}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
-            ))
+            );
+          })
         )}
       </div>
 
@@ -1167,6 +1274,28 @@ export function SignupFlow({
       </form>
 
       {error ? <p className="form-error">{error}</p> : null}
+
+      {companiesTracked.length > 0 ? (
+        <div className="signup-multi-bar">
+          <p className="signup-multi-bar-copy">
+            {companiesTracked.length}{" "}
+            {companiesTracked.length === 1 ? "company" : "companies"} ·{" "}
+            {selected.size} {selected.size === 1 ? "role" : "roles"} selected
+          </p>
+          <button
+            className="cta"
+            type="button"
+            onClick={continueFromCompanyList}
+            disabled={loading}
+          >
+            {loading
+              ? "Saving…"
+              : name.trim() && phone.trim() && smsConsent
+                ? "Save all"
+                : "Continue"}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

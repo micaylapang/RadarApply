@@ -54,15 +54,22 @@ async function main() {
   }
 
   // Drop catalog roles we no longer track (e.g. Two Sigma SWE not currently listed).
+  // Keep roles added from approved company requests (managed_by = 'request').
   const keepSlugs = new Set(INTERNSHIP_CATALOG.map((i) => i.slug));
   const sb = getSupabaseAdmin();
   const { data: existing, error: listErr } = await sb
     .from("internships")
-    .select("id, slug, company, title");
+    .select("id, slug, company, title, managed_by");
   if (listErr) throw listErr;
 
   for (const row of existing ?? []) {
     if (keepSlugs.has(row.slug)) continue;
+    if ((row as { managed_by?: string }).managed_by === "request") {
+      console.log(
+        `  · keep request-added ${row.company} — ${row.title} (${row.slug})`,
+      );
+      continue;
+    }
     const { error } = await sb.from("internships").delete().eq("id", row.id);
     if (error) {
       console.warn(`  ! could not remove ${row.slug}: ${error.message}`);
@@ -111,6 +118,7 @@ async function main() {
     "hrt-algo-intern",
     "jane-street-qr-intern",
     "jane-street-trading-intern",
+    "google-swe-intern",
     "palantir-swe-intern-denver",
     "palantir-swe-intern",
     "palantir-swe-intern-palo-alto",

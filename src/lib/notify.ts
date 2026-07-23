@@ -4,6 +4,7 @@ import {
   getPendingSubscriptions,
   listInternships,
   markSubscriptionAlerted,
+  resetSubscriptionAlerts,
   updateInternshipStatus,
 } from "@/lib/db";
 import { detectMany } from "@/lib/detect";
@@ -71,6 +72,9 @@ export async function notifySubscribers(internshipId: string, detectedAt: number
 
 export type PollStats = {
   roles: number;
+  checked: number;
+  skipped: number;
+  fetchFailed: number;
   boardsFetched: number;
   opened: number;
   closed: number;
@@ -93,10 +97,14 @@ export async function pollOnce(): Promise<PollStats> {
       sourceKey: i.sourceKey,
       titleFilter: i.titleFilter,
       currentStatus: i.status,
+      applyUrl: i.applyUrl,
     })),
   );
 
   const boardKeys = new Set<string>();
+  let checked = 0;
+  let skipped = 0;
+  let fetchFailed = 0;
   let opened = 0;
   let closed = 0;
 
@@ -107,9 +115,18 @@ export async function pollOnce(): Promise<PollStats> {
       if (result.boardKey) boardKeys.add(result.boardKey);
 
       if (result.skipped) {
+        skipped += 1;
         await updateInternshipStatus(internship.id, { lastChecked: now });
         return;
       }
+
+      if (result.fetchFailed) {
+        fetchFailed += 1;
+        await updateInternshipStatus(internship.id, { lastChecked: now });
+        return;
+      }
+
+      checked += 1;
 
       const wasClosed = internship.status === "closed";
       const isOpen = result.open;
@@ -152,6 +169,7 @@ export async function pollOnce(): Promise<PollStats> {
           openedAt: null,
           lastChecked: now,
         });
+        await resetSubscriptionAlerts(internship.id);
         closed += 1;
       } else {
         const liveApply = result.jobs[0]?.absoluteUrl;
@@ -165,6 +183,9 @@ export async function pollOnce(): Promise<PollStats> {
 
   return {
     roles: internships.length,
+    checked,
+    skipped,
+    fetchFailed,
     boardsFetched: boardKeys.size,
     opened,
     closed,

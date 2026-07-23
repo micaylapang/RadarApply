@@ -15,7 +15,7 @@ export const COMPANY_DROP_STATUS: Record<string, DropStatus> = {
   Amazon: "waiting",
   Apple: "open",
   Netflix: "waiting",
-  Google: "waiting",
+  Google: "open",
   Microsoft: "waiting",
   NVIDIA: "waiting",
   Databricks: "waiting",
@@ -68,6 +68,7 @@ export const COMPANY_DROP_STATUS: Record<string, DropStatus> = {
  */
 export const VERIFIED_OPENED_AT: Record<string, string> = {
   "Akuna Capital": "2026-07-13",
+  Google: "2026-07-21",
 };
 
 export type LiveRoleStatus = {

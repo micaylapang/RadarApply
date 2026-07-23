@@ -5,6 +5,7 @@ import {
   type InternshipRow,
   type UserRow,
 } from "@/lib/database.types";
+import { buildRequestCatalogItems } from "@/lib/company-request-approve";
 import { dedupeByCompanyRole } from "@/lib/role-meta";
 
 const USER_SELECT_FULL =
@@ -38,6 +39,18 @@ function isMissingColumnError(
   if (error.code === "42703") return true;
   const msg = (error.message ?? "").toLowerCase();
   return columns.some((col) => msg.includes(col.toLowerCase()));
+}
+
+function isMissingTableError(error: { message?: string; code?: string } | null) {
+  if (!error) return false;
+  // PostgREST: PGRST205 = table not in schema cache / missing
+  if (error.code === "PGRST205" || error.code === "42P01") return true;
+  const msg = (error.message ?? "").toLowerCase();
+  return (
+    msg.includes("could not find the table") ||
+    msg.includes("does not exist") ||
+    msg.includes("relation") && msg.includes("company_requests")
+  );
 }
 
 function isMissingSeasonPassColumn(error: { message?: string; code?: string } | null) {
@@ -401,6 +414,29 @@ export type SignupReport = {
   };
 };
 
+/** Exact user + subscription counts (not limited by PostgREST’s 1000-row page). */
+export async function getSignupTotals(): Promise<{
+  users: number;
+  subscriptions: number;
+}> {
+  const supabase = getSupabaseAdmin();
+
+  const [usersRes, subsRes] = await Promise.all([
+    supabase.from("users").select("id", { count: "exact", head: true }),
+    supabase
+      .from("subscriptions")
+      .select("id", { count: "exact", head: true }),
+  ]);
+
+  if (usersRes.error) throw usersRes.error;
+  if (subsRes.error) throw subsRes.error;
+
+  return {
+    users: usersRes.count ?? 0,
+    subscriptions: subsRes.count ?? 0,
+  };
+}
+
 /** Ops report: every subscriber + company/role popularity. */
 export async function listSignupReport(): Promise<SignupReport> {
   const supabase = getSupabaseAdmin();
@@ -499,14 +535,13 @@ export async function listSignupReport(): Promise<SignupReport> {
         (a.title ?? "").localeCompare(b.title ?? ""),
     );
 
+  const exactTotals = await getSignupTotals();
+
   return {
     users: reportUsers,
     byCompany,
     byRole,
-    totals: {
-      users: reportUsers.length,
-      subscriptions: (subs ?? []).length,
-    },
+    totals: exactTotals,
   };
 }
 
@@ -617,58 +652,423 @@ export async function upsertInternshipCatalogItem(item: {
   sourceType: string;
   sourceKey: string | null;
   titleFilter: string | null;
+  managedBy?: "catalog" | "request";
 }) {
   const supabase = getSupabaseAdmin();
+  const base = {
+    company: item.company,
+    title: item.title,
+    slug: item.slug,
+    description: item.description,
+    apply_url: item.applyUrl,
+    source_type: item.sourceType,
+    source_key: item.sourceKey,
+    title_filter: item.titleFilter,
+  };
+
   const { error } = await supabase.from("internships").upsert(
     {
-      company: item.company,
-      title: item.title,
-      slug: item.slug,
-      description: item.description,
-      apply_url: item.applyUrl,
-      source_type: item.sourceType,
-      source_key: item.sourceKey,
-      title_filter: item.titleFilter,
+      ...base,
+      ...(item.managedBy ? { managed_by: item.managedBy } : {}),
+    } as {
+      company: string;
+      title: string;
+      slug: string;
+      description: string;
+      apply_url: string;
+      source_type: string;
+      source_key: string | null;
+      title_filter: string | null;
+      managed_by?: string;
     },
     { onConflict: "slug" },
   );
 
+  if (error) {
+    // Older DBs may not have managed_by yet — retry without it.
+    if (item.managedBy && isMissingColumnError(error, ["managed_by"])) {
+      const retry = await supabase
+        .from("internships")
+        .upsert(base, { onConflict: "slug" });
+      if (retry.error) throw retry.error;
+      return;
+    }
+    throw error;
+  }
+}
+
+export type CompanyRequest = {
+  id: string;
+  company: string;
+  roles: string | null;
+  contact: string | null;
+  status: string;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  createdAt: string;
+};
+
+function mapCompanyRequest(row: Record<string, unknown>): CompanyRequest {
+  return {
+    id: String(row.id),
+    company: String(row.company),
+    roles: (row.roles as string | null) ?? null,
+    contact: (row.contact as string | null) ?? null,
+    status: String(row.status ?? "pending"),
+    reviewedAt: (row.reviewed_at as string | null) ?? null,
+    reviewNote: (row.review_note as string | null) ?? null,
+    createdAt: String(row.created_at),
+  };
+}
+
+export async function listCompanyRequests(opts?: {
+  status?: "pending" | "approved" | "rejected" | "all";
+}): Promise<CompanyRequest[]> {
+  const supabase = getSupabaseAdmin();
+  const status = opts?.status ?? "pending";
+
+  let query = supabase
+    .from("company_requests")
+    .select(
+      "id, company, roles, contact, status, reviewed_at, review_note, created_at",
+    )
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (status !== "all") {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    if (isMissingTableError(error)) {
+      console.warn(
+        "[db] company_requests table missing — run supabase migration",
+      );
+      return [];
+    }
+    // Pre-migration: status column may not exist — return all as pending.
+    if (isMissingColumnError(error, ["status", "reviewed_at", "review_note"])) {
+      const fallback = await supabase
+        .from("company_requests")
+        .select("id, company, roles, contact, created_at")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (fallback.error) {
+        if (isMissingTableError(fallback.error)) return [];
+        throw fallback.error;
+      }
+      return (fallback.data ?? []).map((row) =>
+        mapCompanyRequest({ ...row, status: "pending" }),
+      );
+    }
+    throw error;
+  }
+
+  return (data ?? []).map((row) => mapCompanyRequest(row));
+}
+
+export async function getCompanyRequest(
+  id: string,
+): Promise<CompanyRequest | null> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("company_requests")
+    .select(
+      "id, company, roles, contact, status, reviewed_at, review_note, created_at",
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingColumnError(error, ["status", "reviewed_at", "review_note"])) {
+      const fallback = await supabase
+        .from("company_requests")
+        .select("id, company, roles, contact, created_at")
+        .eq("id", id)
+        .maybeSingle();
+      if (fallback.error) throw fallback.error;
+      return fallback.data
+        ? mapCompanyRequest({ ...fallback.data, status: "pending" })
+        : null;
+    }
+    throw error;
+  }
+
+  return data ? mapCompanyRequest(data) : null;
+}
+
+export async function rejectCompanyRequest(
+  id: string,
+  note?: string | null,
+): Promise<CompanyRequest | null> {
+  const supabase = getSupabaseAdmin();
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("company_requests")
+    .update({
+      status: "rejected",
+      reviewed_at: now,
+      review_note: note?.trim() || null,
+    })
+    .eq("id", id)
+    .select(
+      "id, company, roles, contact, status, reviewed_at, review_note, created_at",
+    )
+    .maybeSingle();
+
   if (error) throw error;
+  return data ? mapCompanyRequest(data) : null;
+}
+
+export async function approveCompanyRequest(
+  id: string,
+  opts?: { careersUrl?: string | null; rolesText?: string | null },
+): Promise<{
+  request: CompanyRequest;
+  added: Array<{ company: string; title: string; slug: string }>;
+}> {
+  const existing = await getCompanyRequest(id);
+  if (!existing) {
+    throw new Error("Request not found.");
+  }
+  if (existing.status === "approved") {
+    return { request: existing, added: [] };
+  }
+  if (existing.status === "rejected") {
+    throw new Error("Request was already rejected.");
+  }
+
+  const items = buildRequestCatalogItems({
+    company: existing.company,
+    rolesText: opts?.rolesText ?? existing.roles,
+    careersUrl: opts?.careersUrl,
+  });
+
+  for (const item of items) {
+    await upsertInternshipCatalogItem({
+      company: item.company,
+      title: item.title,
+      slug: item.slug,
+      description: item.description,
+      applyUrl: item.applyUrl,
+      sourceType: item.sourceType,
+      sourceKey: item.sourceKey,
+      titleFilter: item.titleFilter,
+      managedBy: "request",
+    });
+  }
+
+  const supabase = getSupabaseAdmin();
+  const now = new Date().toISOString();
+  const note = `Added ${items.length} role${items.length === 1 ? "" : "s"}: ${items
+    .map((i) => i.title)
+    .join(", ")}`;
+
+  const { data, error } = await supabase
+    .from("company_requests")
+    .update({
+      status: "approved",
+      reviewed_at: now,
+      review_note: note,
+      ...(opts?.rolesText !== undefined
+        ? { roles: opts.rolesText?.trim() || null }
+        : {}),
+    })
+    .eq("id", id)
+    .select(
+      "id, company, roles, contact, status, reviewed_at, review_note, created_at",
+    )
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) throw new Error("Could not update request status.");
+
+  return {
+    request: mapCompanyRequest(data),
+    added: items.map((i) => ({
+      company: i.company,
+      title: i.title,
+      slug: i.slug,
+    })),
+  };
 }
 
 export async function insertCompanyRequest(opts: {
   company: string;
   roles?: string | null;
   contact?: string | null;
+  createdAt?: string | null;
+  status?: "pending" | "approved" | "rejected";
 }): Promise<{ id: string } | null> {
-  // Table is optional until migration is applied; not in generated Database types yet.
-  const supabase = getSupabaseAdmin() as unknown as {
-    from: (table: string) => {
-      insert: (row: Record<string, string | null>) => {
-        select: (cols: string) => {
-          single: () => Promise<{
-            data: { id: string } | null;
-            error: { message: string } | null;
-          }>;
-        };
-      };
-    };
+  const supabase = getSupabaseAdmin();
+  const payload = {
+    company: opts.company,
+    roles: opts.roles?.trim() || null,
+    contact: opts.contact?.trim() || null,
+    status: opts.status ?? "pending",
+    ...(opts.createdAt ? { created_at: opts.createdAt } : {}),
   };
 
   const { data, error } = await supabase
     .from("company_requests")
-    .insert({
-      company: opts.company,
-      roles: opts.roles?.trim() || null,
-      contact: opts.contact?.trim() || null,
+    .insert(payload as {
+      company: string;
+      roles: string | null;
+      contact: string | null;
+      status?: string;
+      created_at?: string;
     })
     .select("id")
     .single();
 
   if (error) {
-    // Table may not exist yet — caller can still deliver via email.
+    // Table/status column may not exist yet — caller can still deliver via email.
+    if (isMissingColumnError(error, ["status"]) || isMissingTableError(error)) {
+      const retry = await supabase
+        .from("company_requests")
+        .insert({
+          company: opts.company,
+          roles: opts.roles?.trim() || null,
+          contact: opts.contact?.trim() || null,
+          ...(opts.createdAt ? { created_at: opts.createdAt } : {}),
+        } as {
+          company: string;
+          roles: string | null;
+          contact: string | null;
+          created_at?: string;
+        })
+        .select("id")
+        .single();
+      if (retry.error) {
+        console.error("[db] insertCompanyRequest", retry.error.message);
+        return null;
+      }
+      return retry.data?.id ? { id: String(retry.data.id) } : null;
+    }
     console.error("[db] insertCompanyRequest", error.message);
     return null;
   }
   return data?.id ? { id: String(data.id) } : null;
+}
+
+function requestDedupeKey(opts: {
+  company: string;
+  roles?: string | null;
+  contact?: string | null;
+}) {
+  return [
+    opts.company.trim().toLowerCase(),
+    (opts.roles ?? "").trim().toLowerCase(),
+    (opts.contact ?? "").trim().toLowerCase(),
+  ].join("|");
+}
+
+/** Import historical requests; skips duplicates already in the table. */
+export async function importCompanyRequests(
+  items: Array<{
+    company: string;
+    roles?: string | null;
+    contact?: string | null;
+    createdAt?: string | null;
+  }>,
+): Promise<{
+  imported: number;
+  skipped: number;
+  failed: number;
+  tableMissing?: boolean;
+  error?: string;
+}> {
+  const existing = await listCompanyRequests({ status: "all" });
+  const seen = new Set(
+    existing.map((r) =>
+      requestDedupeKey({
+        company: r.company,
+        roles: r.roles,
+        contact: r.contact,
+      }),
+    ),
+  );
+
+  let imported = 0;
+  let skipped = 0;
+  let failed = 0;
+  let tableMissing = false;
+  let lastError: string | undefined;
+
+  for (const item of items) {
+    const company = item.company?.trim();
+    if (!company) {
+      skipped += 1;
+      continue;
+    }
+    const key = requestDedupeKey({
+      company,
+      roles: item.roles,
+      contact: item.contact,
+    });
+    if (seen.has(key)) {
+      skipped += 1;
+      continue;
+    }
+    const row = await insertCompanyRequest({
+      company,
+      roles: item.roles,
+      contact: item.contact,
+      createdAt: item.createdAt,
+      status: "pending",
+    });
+    if (!row) {
+      failed += 1;
+      // Detect missing table from a probe insert error path.
+      tableMissing = true;
+      lastError =
+        "company_requests table is missing in Supabase. Run the SQL migration, or use the local review queue.";
+      continue;
+    }
+    seen.add(key);
+    imported += 1;
+  }
+
+  return {
+    imported,
+    skipped,
+    failed,
+    ...(tableMissing && imported === 0 ? { tableMissing: true, error: lastError } : {}),
+  };
+}
+
+/** Add catalog roles from a company request without needing a DB request row. */
+export async function applyCompanyRequestCatalog(opts: {
+  company: string;
+  rolesText?: string | null;
+  careersUrl?: string | null;
+}) {
+  const items = buildRequestCatalogItems({
+    company: opts.company,
+    rolesText: opts.rolesText,
+    careersUrl: opts.careersUrl,
+  });
+
+  for (const item of items) {
+    await upsertInternshipCatalogItem({
+      company: item.company,
+      title: item.title,
+      slug: item.slug,
+      description: item.description,
+      applyUrl: item.applyUrl,
+      sourceType: item.sourceType,
+      sourceKey: item.sourceKey,
+      titleFilter: item.titleFilter,
+      managedBy: "request",
+    });
+  }
+
+  return {
+    added: items.map((i) => ({
+      company: i.company,
+      title: i.title,
+      slug: i.slug,
+    })),
+  };
 }

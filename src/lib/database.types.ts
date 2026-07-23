@@ -11,6 +11,18 @@ export type InternshipRow = {
   status: string;
   opened_at: string | null;
   last_checked: string | null;
+  managed_by: string;
+  created_at: string;
+};
+
+export type CompanyRequestRow = {
+  id: string;
+  company: string;
+  roles: string | null;
+  contact: string | null;
+  status: string;
+  reviewed_at: string | null;
+  review_note: string | null;
   created_at: string;
 };
 
@@ -96,6 +108,7 @@ export type Database = {
           status?: string;
           opened_at?: string | null;
           last_checked?: string | null;
+          managed_by?: string;
           created_at?: string;
         };
         Update: {
@@ -111,6 +124,31 @@ export type Database = {
           status?: string;
           opened_at?: string | null;
           last_checked?: string | null;
+          managed_by?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      company_requests: {
+        Row: CompanyRequestRow;
+        Insert: {
+          id?: string;
+          company: string;
+          roles?: string | null;
+          contact?: string | null;
+          status?: string;
+          reviewed_at?: string | null;
+          review_note?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          company?: string;
+          roles?: string | null;
+          contact?: string | null;
+          status?: string;
+          reviewed_at?: string | null;
+          review_note?: string | null;
           created_at?: string;
         };
         Relationships: [];

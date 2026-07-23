@@ -18,7 +18,61 @@ type RawJob = {
   locationHints: Array<string | null | undefined>;
   countryCode?: string | null;
   countryName?: string | null;
+  /** Full HTML for careers-page scraping. */
+  pageText?: string;
 };
+
+function isCareersPageClosed(html: string) {
+  return /no longer available|no longer accepting|position has been filled|job is closed|this job posting is unavailable|role has been filled|page not found|error 404|0 results found|no jobs found|no open positions/i.test(
+    html,
+  );
+}
+
+function isDirectJobPostingUrl(url: string) {
+  return (
+    /jobs\.apple\.com\/.*\/details\//i.test(url) ||
+    /\/jobs\/results\/\d+/i.test(url) ||
+    /\/jobs\/\d+\/?$/i.test(url) ||
+    /\/details\/\d+/i.test(url)
+  );
+}
+
+function careersPageIsOpen(
+  html: string,
+  url: string,
+  titleFilter: string | null | undefined,
+) {
+  if (isCareersPageClosed(html)) return false;
+
+  const haystack = html.toLowerCase();
+  const needle = titleFilter?.trim().toLowerCase();
+  if (needle && !haystack.includes(needle)) return false;
+
+  const hasIntern =
+    /\bintern(?:ship)?s?\b/i.test(html) ||
+    (needle ? /\bintern(?:ship)?s?\b/i.test(needle) : false);
+  if (!hasIntern) return false;
+
+  if (isDirectJobPostingUrl(url)) return true;
+
+  if (matchesSummer2027(html)) return true;
+  if (needle && matchesSummer2027(needle)) return true;
+
+  return /summer\s*2027/i.test(html);
+}
+
+async function fetchCareersPage(url: string): Promise<RawJob[] | null> {
+  const html = await fetchText(url, 10000);
+  if (!html) return null;
+  return [
+    {
+      title: "__page__",
+      absoluteUrl: url,
+      locationHints: ["United States"],
+      pageText: html,
+    },
+  ];
+}
 
 async function fetchJson<T>(url: string, timeoutMs = 8000): Promise<T | null> {
   const controller = new AbortController();
@@ -154,6 +208,78 @@ async function fetchAmazonSearch(query: string): Promise<RawJob[]> {
   }));
 }
 
+async function fetchText(url: string, timeoutMs = 12000): Promise<string | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "User-Agent":
+          "Mozilla/5.0 (compatible; RadarApplyMonitor/1.0; +https://www.radarapply.com)",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return await res.text();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function slugifyGoogleTitle(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Google Careers has no public JSON board API. We scrape the search HTML and
+ * parse AF_initDataCallback job tuples: [id, title, applyUrl, ...].
+ * Returns null on fetch/parse failure so status is left unchanged.
+ */
+async function fetchGoogleCareersSearch(query: string): Promise<RawJob[] | null> {
+  const params = new URLSearchParams({
+    q: query,
+    location: "United States",
+  });
+  const html = await fetchText(
+    `https://careers.google.com/jobs/results/?${params.toString()}`,
+    20000,
+  );
+  if (!html) return null;
+  // Bot wall / layout change — don't treat as "closed".
+  if (!html.includes("AF_initDataCallback")) return null;
+
+  const jobs: RawJob[] = [];
+  const seen = new Set<string>();
+  const re = /\["(\d{10,})","([^"]{3,200})","(https:[^"]+)"/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(html))) {
+    const id = match[1];
+    const title = match[2];
+    const link = match[3];
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const slug = slugifyGoogleTitle(title);
+    jobs.push({
+      title,
+      absoluteUrl: `https://www.google.com/about/careers/applications/jobs/results/${id}-${slug}`,
+      locationHints: [
+        "United States",
+        title,
+        /loc\\u003dUS|loc=US/i.test(link) ? "US" : null,
+      ],
+    });
+  }
+
+  return jobs;
+}
+
 async function fetchBoardJobs(
   sourceType: string,
   sourceKey: string,
@@ -167,9 +293,28 @@ async function fetchBoardJobs(
       return fetchAshbyBoard(sourceKey);
     case "amazon":
       return fetchAmazonSearch(sourceKey);
+    case "google":
+      return fetchGoogleCareersSearch(sourceKey);
+    case "careers-page":
+      return fetchCareersPage(sourceKey);
     default:
       return null;
   }
+}
+
+function filterCareersPageJobs(
+  raw: RawJob[],
+  sourceKey: string,
+  titleFilter: string | null,
+): JobHit[] {
+  const html = raw[0]?.pageText ?? "";
+  if (!html || !careersPageIsOpen(html, sourceKey, titleFilter)) return [];
+  return [
+    {
+      title: titleFilter?.trim() || "Internship",
+      absoluteUrl: raw[0]?.absoluteUrl ?? sourceKey,
+    },
+  ];
 }
 
 function filterBoardJobs(
@@ -178,7 +323,11 @@ function filterBoardJobs(
   sourceKey: string,
   titleFilter: string | null,
 ): JobHit[] {
-  return raw
+  if (sourceType === "careers-page") {
+    return filterCareersPageJobs(raw, sourceKey, titleFilter);
+  }
+
+  const hits = raw
     .filter((j) => {
       if (sourceType === "amazon" && !isUsCountryCode(j.countryCode)) {
         return false;
@@ -189,6 +338,46 @@ function filterBoardJobs(
       return isUsLocationHint(...j.locationHints);
     })
     .map((j) => ({ title: j.title, absoluteUrl: j.absoluteUrl }));
+
+  // Prefer BS over MS when Google lists both for the same watch.
+  if (sourceType === "google") {
+    hits.sort((a, b) => {
+      const aBs = /\bBS\b/i.test(a.title) ? 0 : 1;
+      const bBs = /\bBS\b/i.test(b.title) ? 0 : 1;
+      return aBs - bBs;
+    });
+  }
+
+  return hits;
+}
+
+function isScrapableCareersUrl(url: string) {
+  if (!/^https?:\/\//i.test(url)) return false;
+  // Search-engine fallbacks from request approvals — not real careers pages.
+  if (/google\.[^/]+\/search/i.test(url)) return false;
+  if (/bing\.[^/]+\/search/i.test(url)) return false;
+  if (/duckduckgo\.com/i.test(url)) return false;
+  if (/linkedin\.com\/jobs\/search/i.test(url)) return false;
+  return true;
+}
+
+function resolveMonitorSource(item: {
+  sourceType: string;
+  sourceKey: string | null;
+  applyUrl?: string | null;
+}): { sourceType: string; sourceKey: string } | null {
+  if (item.sourceType !== "manual" && item.sourceKey) {
+    return { sourceType: item.sourceType, sourceKey: item.sourceKey };
+  }
+  const applyUrl = item.applyUrl?.trim();
+  if (
+    item.sourceType === "manual" &&
+    applyUrl &&
+    isScrapableCareersUrl(applyUrl)
+  ) {
+    return { sourceType: "careers-page", sourceKey: applyUrl };
+  }
+  return null;
 }
 
 /**
@@ -202,36 +391,58 @@ export async function detectMany(
     sourceKey: string | null;
     titleFilter: string | null;
     currentStatus: string;
+    applyUrl?: string | null;
   }>,
 ): Promise<
   Map<
     string,
-    { open: boolean; jobs: JobHit[]; skipped?: boolean; boardKey?: string }
+    {
+      open: boolean;
+      jobs: JobHit[];
+      skipped?: boolean;
+      fetchFailed?: boolean;
+      boardKey?: string;
+    }
   >
 > {
   const results = new Map<
     string,
-    { open: boolean; jobs: JobHit[]; skipped?: boolean; boardKey?: string }
+    {
+      open: boolean;
+      jobs: JobHit[];
+      skipped?: boolean;
+      fetchFailed?: boolean;
+      boardKey?: string;
+    }
   >();
 
-  const fetchable = items.filter(
-    (i) => i.sourceType !== "manual" && Boolean(i.sourceKey),
-  );
-  const skipped = items.filter(
-    (i) => i.sourceType === "manual" || !i.sourceKey,
-  );
+  const resolved = new Map<
+    string,
+    { sourceType: string; sourceKey: string; titleFilter: string | null; currentStatus: string }
+  >();
 
-  for (const item of skipped) {
-    results.set(item.id, {
-      open: item.currentStatus === "open",
-      jobs: [],
-      skipped: true,
+  for (const item of items) {
+    const source = resolveMonitorSource(item);
+    if (!source) {
+      results.set(item.id, {
+        open: item.currentStatus === "open",
+        jobs: [],
+        skipped: true,
+      });
+      continue;
+    }
+    resolved.set(item.id, {
+      ...source,
+      titleFilter: item.titleFilter,
+      currentStatus: item.currentStatus,
     });
   }
 
   const boardKeys = [
     ...new Set(
-      fetchable.map((i) => sourceCacheKey(i.sourceType, i.sourceKey!)),
+      [...resolved.values()].map((i) =>
+        sourceCacheKey(i.sourceType, i.sourceKey),
+      ),
     ),
   ];
 
@@ -244,15 +455,15 @@ export async function detectMany(
     }),
   );
 
-  for (const item of fetchable) {
-    const key = sourceCacheKey(item.sourceType, item.sourceKey!);
+  for (const [id, item] of resolved) {
+    const key = sourceCacheKey(item.sourceType, item.sourceKey);
     const raw = boardJobs.get(key);
     if (!raw) {
       // Fetch failed — leave status unchanged this tick.
-      results.set(item.id, {
+      results.set(id, {
         open: item.currentStatus === "open",
         jobs: [],
-        skipped: true,
+        fetchFailed: true,
         boardKey: key,
       });
       continue;
@@ -260,10 +471,10 @@ export async function detectMany(
     const jobs = filterBoardJobs(
       raw,
       item.sourceType,
-      item.sourceKey!,
+      item.sourceKey,
       item.titleFilter,
     );
-    results.set(item.id, {
+    results.set(id, {
       open: jobs.length > 0,
       jobs,
       boardKey: key,
@@ -278,6 +489,7 @@ export async function detectInternshipOpen(opts: {
   sourceKey: string | null;
   titleFilter: string | null;
   currentStatus: string;
+  applyUrl?: string | null;
 }): Promise<{ open: boolean; jobs: JobHit[]; skipped?: boolean }> {
   const map = await detectMany([{ id: "_", ...opts }]);
   return map.get("_") ?? { open: opts.currentStatus === "open", jobs: [], skipped: true };

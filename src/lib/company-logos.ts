@@ -65,7 +65,17 @@ export const COMPANY_LOGOS: Record<
 };
 
 export function companyLogoUrl(company: string): string | null {
-  return COMPANY_LOGOS[company]?.src ?? null;
+  const curated = COMPANY_LOGOS[company]?.src;
+  if (curated) return curated;
+  // Request-approved companies: Clearbit mark until a file is added under /public/logos.
+  const domain = company
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "")
+    .slice(0, 48);
+  if (!domain) return null;
+  return `https://logo.clearbit.com/${domain}.com`;
 }
 
 /** Throws if any company is missing a logo entry or src. */

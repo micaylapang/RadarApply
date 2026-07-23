@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminSecret, isAdminAuthorized } from "@/lib/admin-auth";
-import { getSignupTotals } from "@/lib/db";
+import { listCompanyRequests } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
 
   if (!adminSecret()) {
     return NextResponse.json(
-      { error: "Set ADMIN_SECRET (or CRON_SECRET) to unlock the signup report." },
+      { error: "Set ADMIN_SECRET (or CRON_SECRET) to unlock admin." },
       { status: 503 },
     );
   }
@@ -25,12 +25,22 @@ export async function GET(request: Request) {
   }
 
   try {
-    const totals = await getSignupTotals();
-    return NextResponse.json({ totals });
+    const url = new URL(request.url);
+    const statusParam = url.searchParams.get("status") ?? "pending";
+    const status =
+      statusParam === "all" ||
+      statusParam === "approved" ||
+      statusParam === "rejected" ||
+      statusParam === "pending"
+        ? statusParam
+        : "pending";
+
+    const requests = await listCompanyRequests({ status });
+    return NextResponse.json({ requests });
   } catch (err) {
-    console.error("[admin/signups]", err);
+    console.error("[admin/company-requests]", err);
     return NextResponse.json(
-      { error: "Could not load signup report." },
+      { error: "Could not load company requests." },
       { status: 500 },
     );
   }

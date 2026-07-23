@@ -26,6 +26,8 @@ create table if not exists internships (
   status text not null default 'closed',
   opened_at timestamptz,
   last_checked timestamptz,
+  managed_by text not null default 'catalog'
+    check (managed_by in ('catalog', 'request')),
   created_at timestamptz not null default now()
 );
 
@@ -81,11 +83,18 @@ create table if not exists company_requests (
   company text not null,
   roles text,
   contact text,
+  status text not null default 'pending'
+    check (status in ('pending', 'approved', 'rejected')),
+  reviewed_at timestamptz,
+  review_note text,
   created_at timestamptz not null default now()
 );
 
 create index if not exists company_requests_created_at_idx
   on company_requests (created_at desc);
+
+create index if not exists company_requests_status_created_idx
+  on company_requests (status, created_at desc);
 
 alter table company_requests enable row level security;
 

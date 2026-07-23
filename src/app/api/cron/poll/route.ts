@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   try {
     const stats = await pollOnce();
     console.log(
-      `[cron/poll] roles=${stats.roles} boards=${stats.boardsFetched} opened=${stats.opened} closed=${stats.closed} ${stats.elapsedMs}ms`,
+      `[cron/poll] roles=${stats.roles} checked=${stats.checked} skipped=${stats.skipped} fetchFailed=${stats.fetchFailed} boards=${stats.boardsFetched} opened=${stats.opened} closed=${stats.closed} ${stats.elapsedMs}ms`,
     );
     return NextResponse.json({
       ok: true,

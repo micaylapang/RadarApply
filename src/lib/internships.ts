@@ -4,14 +4,14 @@ export type InternshipCatalogItem = {
   slug: string;
   description: string;
   applyUrl: string;
-  sourceType: "greenhouse" | "lever" | "ashby" | "amazon" | "manual";
+  sourceType: "greenhouse" | "lever" | "ashby" | "amazon" | "google" | "careers-page" | "manual";
   sourceKey: string | null;
   titleFilter: string | null;
 };
 
 /**
- * Curated internship watches. Greenhouse/Lever/Ashby/Amazon boards are polled
- * by the monitor worker for open detection.
+ * Curated internship watches. Greenhouse/Lever/Ashby/Amazon/Google boards are
+ * polled by the monitor worker for open detection.
  * Product target: Summer 2027, US only (see matchesSummer2027 + isUsLocationHint).
  */
 const RAW_CATALOG: InternshipCatalogItem[] = [
@@ -107,17 +107,17 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     titleFilter: "Data Engineering Intern",
   },
 
-  // Google (FAANG)
+  // Google (FAANG) — scraped from careers.google.com search HTML
   {
     company: "Google",
     title: "Software Engineering Intern",
     slug: "google-swe-intern",
     description: "Google SWE internship",
     applyUrl:
-      "https://careers.google.com/jobs/results/?q=software%20engineering%20intern",
-    sourceType: "manual",
-    sourceKey: null,
-    titleFilter: "Software",
+      "https://www.google.com/about/careers/applications/jobs/results/85564713261245126-software-engineering-intern-bs-summer-2027",
+    sourceType: "google",
+    sourceKey: "Software Engineering Intern Summer 2027",
+    titleFilter: "Software Engineering Intern",
   },
   {
     company: "Google",
@@ -125,8 +125,8 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     slug: "google-step-intern",
     description: "Google STEP internship for first/second year students",
     applyUrl: "https://careers.google.com/jobs/results/?q=STEP%20intern",
-    sourceType: "manual",
-    sourceKey: null,
+    sourceType: "google",
+    sourceKey: "STEP Intern Summer 2027",
     titleFilter: "STEP",
   },
   {
@@ -136,9 +136,9 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     description: "Google data science internship",
     applyUrl:
       "https://careers.google.com/jobs/results/?q=data%20science%20intern",
-    sourceType: "manual",
-    sourceKey: null,
-    titleFilter: "Data",
+    sourceType: "google",
+    sourceKey: "Data Science Intern Summer 2027",
+    titleFilter: "Data Science Intern",
   },
 
   // Capital One

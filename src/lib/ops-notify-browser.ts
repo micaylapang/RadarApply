@@ -19,11 +19,10 @@ export async function notifySignupFromBrowser(opts: {
   alerts: OpsAlertItem[];
   isNewUser?: boolean;
 }): Promise<boolean> {
-  const kind = opts.isNewUser === false ? "Added alerts" : "New signup";
-  const headline =
-    opts.isNewUser === false
-      ? "RadarApply — alerts added"
-      : "New RadarApply SMS signup";
+  // New account signups only — never email when someone adds more roles.
+  if (opts.isNewUser !== true) return false;
+
+  const headline = "New RadarApply SMS signup";
   const phoneDisplay = formatPhoneDisplay(opts.phone);
 
   const alertLines =
@@ -41,7 +40,7 @@ export async function notifySignupFromBrowser(opts: {
     ...alertLines,
   ].join("\n");
 
-  const subject = `${kind}: ${opts.name} (${opts.alerts.length} alert${
+  const subject = `New signup: ${opts.name} (${opts.alerts.length} alert${
     opts.alerts.length === 1 ? "" : "s"
   })`;
 

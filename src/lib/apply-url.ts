@@ -59,6 +59,14 @@ export function isDirectApplyUrl(url: string | null | undefined): boolean {
       return true;
     }
 
+    // Google Careers job detail pages (/jobs/results/{id}-slug)
+    if (
+      (host.includes("google.com") || host.includes("careers.google.com")) &&
+      /\/jobs\/results\/\d+/i.test(path)
+    ) {
+      return true;
+    }
+
     // Ashby hosted postings: /jobs/{id} or /{board}/{uuid}
     if (host.includes("ashbyhq.com")) {
       if (/\/jobs?\//i.test(path)) return true;
