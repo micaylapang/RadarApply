@@ -61,14 +61,14 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     titleFilter: "Summer 2027",
   },
 
-  // Apple (FAANG) — curated open; Apply Now only (not SMS tracking)
+  // Apple (FAANG) — US undergrad internships from jobs.apple.com Students: Internships
   {
     company: "Apple",
     title: "Software Engineering Intern",
     slug: "apple-swe-intern",
     description: "Apple US undergrad software engineering internship",
     applyUrl:
-      "https://jobs.apple.com/en-us/details/200664785/software-undergrad-engineering-internships",
+      "https://jobs.apple.com/en-us/details/200664785-3810/software-undergrad-engineering-internships",
     sourceType: "manual",
     sourceKey: null,
     titleFilter: "Software Undergrad Engineering",
@@ -82,7 +82,73 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
       "https://jobs.apple.com/en-us/details/200664780-3810/machine-learning-and-artificial-intelligence-undergrad-internships",
     sourceType: "manual",
     sourceKey: null,
-    titleFilter: "Machine Learning and Artificial Intelligence",
+    titleFilter: "Machine Learning and Artificial Intelligence Undergrad",
+  },
+  {
+    company: "Apple",
+    title: "Hardware Engineering Intern",
+    slug: "apple-hardware-intern",
+    description: "Apple US undergrad hardware engineering internship",
+    applyUrl:
+      "https://jobs.apple.com/en-us/details/200663981-3810/hardware-undergrad-engineering-internships",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "Hardware Undergrad Engineering",
+  },
+  {
+    company: "Apple",
+    title: "Hardware Technologies Intern",
+    slug: "apple-hardware-tech-intern",
+    description: "Apple US undergrad hardware technologies internship",
+    applyUrl:
+      "https://jobs.apple.com/en-us/details/200663968-3810/hardware-technologies-undergrad-engineering-internships",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "Hardware Technologies Undergrad",
+  },
+  {
+    company: "Apple",
+    title: "Product Design Intern",
+    slug: "apple-product-design-intern",
+    description: "Apple US undergrad product design internship",
+    applyUrl:
+      "https://jobs.apple.com/en-us/details/200664000-3810/product-design-undergrad-internships",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "Product Design Undergrad",
+  },
+  {
+    company: "Apple",
+    title: "Operations & Manufacturing Design Intern",
+    slug: "apple-ops-mfg-design-intern",
+    description: "Apple US undergrad operations & manufacturing design internship",
+    applyUrl:
+      "https://jobs.apple.com/en-us/details/200664002-3810/operations-manufacturing-design-undergrad-internships",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "Operations Manufacturing Design Undergrad",
+  },
+  {
+    company: "Apple",
+    title: "Engineering Program Management Intern",
+    slug: "apple-epm-intern",
+    description: "Apple US undergrad engineering program management internship",
+    applyUrl:
+      "https://jobs.apple.com/en-us/details/200664330-3810/engineering-program-management-undergrad-internships",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "Engineering Program Management Undergrad",
+  },
+  {
+    company: "Apple",
+    title: "Business, Marketing & Creative Intern",
+    slug: "apple-bmc-intern",
+    description: "Apple US undergrad business, marketing & creative internship",
+    applyUrl:
+      "https://jobs.apple.com/en-us/details/200664241-3810/business-marketing-creative-undergrad-internships",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "Business Marketing Creative Undergrad",
   },
 
   // Netflix (FAANG)
@@ -359,26 +425,126 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     titleFilter: "Data",
   },
 
-  // Big tech (from tracked list)
+  // Microsoft — university internship tracks (students hub + program pages)
   {
     company: "Microsoft",
     title: "Software Engineering Intern",
     slug: "microsoft-swe-intern",
     description: "Microsoft US software engineering internship",
-    applyUrl: "https://careers.microsoft.com/students/us/en/us-internships",
+    applyUrl:
+      "https://jobs.careers.microsoft.com/global/en/search?q=Software%20Engineering%20Intern&lc=United%20States",
     sourceType: "manual",
     sourceKey: null,
-    titleFilter: "Software",
+    titleFilter: "Software Engineering Intern",
   },
   {
     company: "Microsoft",
-    title: "Product Management Intern",
-    slug: "microsoft-pm-intern",
-    description: "Microsoft US product management internship",
-    applyUrl: "https://careers.microsoft.com/students/us/en/us-internships",
+    title: "Explore Intern",
+    slug: "microsoft-explore-intern",
+    description:
+      "Microsoft Explore internship for first- and second-year undergraduates",
+    applyUrl: "https://careers.microsoft.com/v2/global/en/exploremicrosoft",
     sourceType: "manual",
     sourceKey: null,
-    titleFilter: "Product",
+    titleFilter: "Explore",
+  },
+  {
+    company: "Microsoft",
+    title: "Program Manager Intern",
+    slug: "microsoft-pm-intern",
+    description: "Microsoft US program manager internship",
+    applyUrl:
+      "https://jobs.careers.microsoft.com/global/en/search?q=Program%20Manager%20Intern&lc=United%20States",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "Program Manager Intern",
+  },
+  {
+    company: "Microsoft",
+    title: "Data Science Intern",
+    slug: "microsoft-data-intern",
+    description: "Microsoft US data science internship",
+    applyUrl:
+      "https://jobs.careers.microsoft.com/global/en/search?q=Data%20Science%20Intern&lc=United%20States",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "Data Science Intern",
+  },
+  {
+    company: "Microsoft",
+    title: "Research Intern",
+    slug: "microsoft-research-intern",
+    description: "Microsoft Research internship (typically PhD)",
+    applyUrl: "https://www.microsoft.com/en-us/research/careers/",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "Research Intern",
+  },
+  {
+    company: "Microsoft",
+    title: "Hardware Engineering Intern",
+    slug: "microsoft-hardware-intern",
+    description: "Microsoft US hardware engineering internship",
+    applyUrl:
+      "https://jobs.careers.microsoft.com/global/en/search?q=Hardware%20Intern&lc=United%20States",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "Hardware",
+  },
+  {
+    company: "Microsoft",
+    title: "UX Design Intern",
+    slug: "microsoft-ux-intern",
+    description: "Microsoft US UX / product design internship",
+    applyUrl:
+      "https://jobs.careers.microsoft.com/global/en/search?q=UX%20Design%20Intern&lc=United%20States",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "UX",
+  },
+  {
+    company: "Microsoft",
+    title: "Security Engineering Intern",
+    slug: "microsoft-security-intern",
+    description: "Microsoft US security engineering internship",
+    applyUrl:
+      "https://jobs.careers.microsoft.com/global/en/search?q=Security%20Intern&lc=United%20States",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "Security",
+  },
+  {
+    company: "Microsoft",
+    title: "Applied Science Intern",
+    slug: "microsoft-applied-science-intern",
+    description: "Microsoft US applied science internship",
+    applyUrl:
+      "https://jobs.careers.microsoft.com/global/en/search?q=Applied%20Science%20Intern&lc=United%20States",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "Applied Science",
+  },
+  {
+    company: "Microsoft",
+    title: "Finance Intern",
+    slug: "microsoft-finance-intern",
+    description: "Microsoft US finance internship",
+    applyUrl:
+      "https://jobs.careers.microsoft.com/global/en/search?q=Finance%20Intern&lc=United%20States",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "Finance Intern",
+  },
+  {
+    company: "Microsoft",
+    title: "Marketing Intern",
+    slug: "microsoft-marketing-intern",
+    description: "Microsoft US marketing internship",
+    applyUrl:
+      "https://jobs.careers.microsoft.com/global/en/search?q=Marketing%20Intern&lc=United%20States",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "Marketing Intern",
   },
   {
     company: "NVIDIA",

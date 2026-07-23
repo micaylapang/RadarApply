@@ -5,6 +5,7 @@ import { applyCompanyRequestCatalog } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const bodySchema = z.object({
   company: z.string().trim().min(1).max(120),

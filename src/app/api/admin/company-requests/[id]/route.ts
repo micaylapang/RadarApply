@@ -5,6 +5,7 @@ import { approveCompanyRequest, rejectCompanyRequest } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const bodySchema = z.object({
   action: z.enum(["approve", "reject"]),

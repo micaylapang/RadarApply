@@ -18,6 +18,7 @@ type OpenRole = {
   status: string;
   applyUrl: string | null;
   openedAt: string | null;
+  logoUrl?: string | null;
 };
 
 type RoleFamily = {
@@ -30,9 +31,15 @@ type RoleFamily = {
   }>;
 };
 
-function CompanyLogo({ company }: { company: string }) {
+function CompanyLogo({
+  company,
+  logoUrl,
+}: {
+  company: string;
+  logoUrl?: string | null;
+}) {
   const [failed, setFailed] = useState(false);
-  const src = companyLogoUrl(company);
+  const src = companyLogoUrl(company, logoUrl);
   const initial = company.trim().charAt(0).toUpperCase() || "?";
 
   if (!src || failed) {
@@ -221,6 +228,7 @@ export function OpenRolesBoard() {
     return Array.from(map.entries())
       .map(([company, companyRoles]) => ({
         company,
+        logoUrl: companyRoles.find((r) => r.logoUrl)?.logoUrl ?? null,
         families: groupRoleFamilies(companyRoles),
       }))
       .sort((a, b) => a.company.localeCompare(b.company));
@@ -265,7 +273,7 @@ export function OpenRolesBoard() {
         </p>
       ) : (
         <ul className="open-company-list" role="list">
-          {groups.map(({ company, families }) => {
+          {groups.map(({ company, logoUrl, families }) => {
             const isOpen = expanded.has(company);
             const count = families.length;
             const panelId = `open-roles-${company.replace(/\s+/g, "-").toLowerCase()}`;
@@ -277,7 +285,7 @@ export function OpenRolesBoard() {
               >
                 <div className="open-company-row">
                   <div className="open-company-title">
-                    <CompanyLogo company={company} />
+                    <CompanyLogo company={company} logoUrl={logoUrl} />
                     <div className="open-company-copy">
                       <h2>{company}</h2>
                       <p className="open-company-meta is-open-now">Open Now</p>

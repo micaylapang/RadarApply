@@ -48,9 +48,15 @@ function trackerStatusLabel(item: Tracking): string {
   return "open ✅";
 }
 
-function CompanyLogo({ company }: { company: string }) {
+function CompanyLogo({
+  company,
+  logoUrl,
+}: {
+  company: string;
+  logoUrl?: string | null;
+}) {
   const [failed, setFailed] = useState(false);
-  const src = companyLogoUrl(company);
+  const src = companyLogoUrl(company, logoUrl);
   const initial = company.trim().charAt(0).toUpperCase() || "?";
 
   if (!src || failed) {

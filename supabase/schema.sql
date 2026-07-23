@@ -28,6 +28,7 @@ create table if not exists internships (
   last_checked timestamptz,
   managed_by text not null default 'catalog'
     check (managed_by in ('catalog', 'request')),
+  logo_url text,
   created_at timestamptz not null default now()
 );
 

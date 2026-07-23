@@ -34,6 +34,7 @@ export type InternshipOption = {
   sourceType: string;
   applyUrl: string | null;
   openedAt: string | null;
+  logoUrl?: string | null;
 };
 
 type Props = {
@@ -47,9 +48,15 @@ type Props = {
 
 type Step = "contact" | "company" | "roles" | "success";
 
-function CompanyLogo({ company }: { company: string }) {
+function CompanyLogo({
+  company,
+  logoUrl,
+}: {
+  company: string;
+  logoUrl?: string | null;
+}) {
   const [failed, setFailed] = useState(false);
-  const src = companyLogoUrl(company);
+  const src = companyLogoUrl(company, logoUrl);
   const initial = company.trim().charAt(0).toUpperCase() || "?";
 
   if (!src || failed) {
@@ -182,6 +189,7 @@ export function SignupFlow({
               sourceType: string;
               applyUrl: string | null;
               openedAt?: string | null;
+              logoUrl?: string | null;
             }) => ({
               id: i.id,
               company: i.company,
@@ -192,6 +200,7 @@ export function SignupFlow({
               sourceType: i.sourceType,
               applyUrl: i.applyUrl,
               openedAt: i.openedAt ?? null,
+              logoUrl: i.logoUrl ?? null,
             }),
           ),
         );
@@ -263,6 +272,7 @@ export function SignupFlow({
               sourceType: string;
               applyUrl?: string | null;
               openedAt?: string | null;
+              logoUrl?: string | null;
             }) => ({
               id: i.id,
               company: i.company,
@@ -273,6 +283,7 @@ export function SignupFlow({
               sourceType: i.sourceType,
               applyUrl: i.applyUrl ?? null,
               openedAt: i.openedAt ?? null,
+              logoUrl: i.logoUrl ?? null,
             }),
           ),
         );
@@ -297,6 +308,16 @@ export function SignupFlow({
     return Array.from(map.entries()).sort(([a], [b]) =>
       a.localeCompare(b),
     );
+  }, [internships]);
+
+  const logoByCompany = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of internships) {
+      if (item.logoUrl && !map.has(item.company)) {
+        map.set(item.company, item.logoUrl);
+      }
+    }
+    return map;
   }, [internships]);
 
   const selectedByCompany = useMemo(() => {
@@ -840,7 +861,10 @@ export function SignupFlow({
           <div className="signup-flow-company">
             <div className="signup-flow-company-row">
               <div className="signup-flow-company-left">
-                <CompanyLogo company={activeCompany} />
+                <CompanyLogo
+                  company={activeCompany}
+                  logoUrl={logoByCompany.get(activeCompany)}
+                />
                 <h1>{activeCompany}</h1>
               </div>
               <p
@@ -992,7 +1016,10 @@ export function SignupFlow({
           <ul className="signup-summary">
             {companiesTracked.map((company) => (
               <li key={company}>
-                <CompanyLogo company={company} />
+                <CompanyLogo
+                  company={company}
+                  logoUrl={logoByCompany.get(company)}
+                />
                 <span>
                   {company}
                   <em>
@@ -1168,7 +1195,10 @@ export function SignupFlow({
                   aria-expanded={isOpen}
                 >
                   <span className="company-toggle-left">
-                    <CompanyLogo company={company} />
+                    <CompanyLogo
+                      company={company}
+                      logoUrl={logoByCompany.get(company)}
+                    />
                     <span className="company-toggle-text">
                       <span className="company-toggle-name">{company}</span>
                     </span>

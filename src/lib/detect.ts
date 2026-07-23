@@ -1,5 +1,6 @@
 import {
   matchesSummer2027,
+  roleFamilyTitle,
   roleSeason,
   roleYears,
   TARGET_YEAR,
@@ -493,4 +494,271 @@ export async function detectInternshipOpen(opts: {
 }): Promise<{ open: boolean; jobs: JobHit[]; skipped?: boolean }> {
   const map = await detectMany([{ id: "_", ...opts }]);
   return map.get("_") ?? { open: opts.currentStatus === "open", jobs: [], skipped: true };
+}
+
+export type DiscoveredInternshipRole = {
+  title: string;
+  applyUrl: string;
+  sourceType: "greenhouse" | "lever" | "ashby" | "careers-page";
+  sourceKey: string;
+  titleFilter: string;
+  /** True when a live Summer 2027 US posting was found. */
+  open: boolean;
+};
+
+function parseAtsFromUrl(
+  url: string,
+): { sourceType: "greenhouse" | "lever" | "ashby"; sourceKey: string } | null {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase().replace(/^www\./, "");
+    const segments = u.pathname.split("/").filter(Boolean);
+
+    // boards.greenhouse.io/{token} or job-boards.greenhouse.io/{token}
+    if (
+      host === "boards.greenhouse.io" ||
+      host === "job-boards.greenhouse.io"
+    ) {
+      const token = segments[0];
+      if (token && !["embed", "jobs", "gh_jid"].includes(token)) {
+        return { sourceType: "greenhouse", sourceKey: token };
+      }
+    }
+
+    const ghEmbed =
+      u.searchParams.get("for") ||
+      u.pathname.match(/\/(?:boards|v1\/boards)\/([a-z0-9_-]+)/i)?.[1];
+    if (
+      ghEmbed &&
+      (host.includes("greenhouse.io") || host.includes("greenhouse.com"))
+    ) {
+      return { sourceType: "greenhouse", sourceKey: ghEmbed };
+    }
+
+    // jobs.lever.co/{token}
+    if (host === "jobs.lever.co" || host.endsWith(".lever.co")) {
+      const token = segments[0];
+      if (token && token !== "api") {
+        return { sourceType: "lever", sourceKey: token };
+      }
+    }
+
+    // jobs.ashbyhq.com/{token}
+    if (host === "jobs.ashbyhq.com" || host.endsWith(".ashbyhq.com")) {
+      const token = segments[0];
+      if (token && !["api", "posting-api"].includes(token)) {
+        return { sourceType: "ashby", sourceKey: token };
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function companyBoardSlugCandidates(company: string): string[] {
+  const raw = company.trim().toLowerCase();
+  const compact = raw.replace(/[^a-z0-9]+/g, "");
+  const dashed = raw
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  const noSuffix = compact.replace(/(inc|llc|ltd|corp|co)$/i, "");
+  return [...new Set([compact, dashed, noSuffix].filter((s) => s.length >= 2))];
+}
+
+async function resolveDiscoverySource(opts: {
+  company: string;
+  careersUrl?: string | null;
+}): Promise<{
+  sourceType: "greenhouse" | "lever" | "ashby" | "careers-page";
+  sourceKey: string;
+} | null> {
+  const careersUrl = opts.careersUrl?.trim() || null;
+  if (careersUrl) {
+    const fromUrl = parseAtsFromUrl(careersUrl);
+    if (fromUrl) return fromUrl;
+    if (isScrapableCareersUrl(careersUrl)) {
+      return { sourceType: "careers-page", sourceKey: careersUrl };
+    }
+  }
+
+  // Probe common ATS boards by company slug when no usable careers URL.
+  const candidates = companyBoardSlugCandidates(opts.company);
+  for (const slug of candidates) {
+    for (const sourceType of ["greenhouse", "lever", "ashby"] as const) {
+      const jobs = await fetchBoardJobs(sourceType, slug);
+      if (jobs && jobs.length > 0) {
+        return { sourceType, sourceKey: slug };
+      }
+    }
+  }
+  return null;
+}
+
+function isUsInternshipJob(
+  job: RawJob,
+  sourceType: string,
+  sourceKey: string,
+): boolean {
+  if (!isInternshipTitle(job.title)) return false;
+  if (sourceType === "amazon" && !isUsCountryCode(job.countryCode)) return false;
+  if (job.countryName) return isUsCountryName(job.countryName);
+  return isUsLocationHint(...job.locationHints);
+}
+
+function extractInternLinksFromHtml(
+  html: string,
+  pageUrl: string,
+): Array<{ title: string; absoluteUrl: string }> {
+  const out: Array<{ title: string; absoluteUrl: string }> = [];
+  const seen = new Set<string>();
+
+  const re =
+    /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(html))) {
+    const href = match[1];
+    const text = match[2]
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!isInternshipTitle(text) || text.length > 120) continue;
+    let absoluteUrl = href;
+    try {
+      absoluteUrl = new URL(href, pageUrl).toString();
+    } catch {
+      continue;
+    }
+    const key = text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ title: text, absoluteUrl });
+  }
+
+  return out;
+}
+
+/**
+ * When a company request has no roles listed, scan ATS / careers pages for
+ * US internship postings and return one row per role family.
+ */
+export async function discoverInternshipRoles(opts: {
+  company: string;
+  careersUrl?: string | null;
+}): Promise<DiscoveredInternshipRole[]> {
+  const source = await resolveDiscoverySource(opts);
+  if (!source) return [];
+
+  const nowOpenByFamily = new Map<
+    string,
+    { title: string; applyUrl: string; titleFilter: string }
+  >();
+  const offeredByFamily = new Map<
+    string,
+    { title: string; applyUrl: string; titleFilter: string }
+  >();
+
+  if (source.sourceType === "careers-page") {
+    const raw = await fetchCareersPage(source.sourceKey);
+    const html = raw?.[0]?.pageText ?? "";
+    if (!html) return [];
+
+    const links = extractInternLinksFromHtml(html, source.sourceKey);
+    for (const link of links) {
+      const family = cleanDiscoveredTitle(link.title);
+      const key = family.toLowerCase();
+      const titleFilter = titleFilterFromDiscovered(family);
+      const row = {
+        title: family,
+        applyUrl: link.absoluteUrl,
+        titleFilter,
+      };
+      offeredByFamily.set(key, row);
+      if (matchesSummer2027(link.title) || matchesSummer2027(html)) {
+        // Page-level Summer 2027 + specific intern link → treat as open.
+        if (matchesSummer2027(link.title) || careersPageIsOpen(html, source.sourceKey, titleFilter)) {
+          nowOpenByFamily.set(key, row);
+        }
+      }
+    }
+
+    // Fallback: page clearly has Summer 2027 internships but no parseable links.
+    if (offeredByFamily.size === 0 && careersPageIsOpen(html, source.sourceKey, null)) {
+      offeredByFamily.set("software engineering intern", {
+        title: "Software Engineering Intern",
+        applyUrl: source.sourceKey,
+        titleFilter: "Software",
+      });
+      nowOpenByFamily.set("software engineering intern", {
+        title: "Software Engineering Intern",
+        applyUrl: source.sourceKey,
+        titleFilter: "Software",
+      });
+    }
+  } else {
+    const raw = await fetchBoardJobs(source.sourceType, source.sourceKey);
+    if (!raw) return [];
+
+    for (const job of raw) {
+      if (!isUsInternshipJob(job, source.sourceType, source.sourceKey)) continue;
+      const family = cleanDiscoveredTitle(job.title);
+      const key = family.toLowerCase();
+      const applyUrl = job.absoluteUrl ?? boardFallbackUrl(source);
+      const titleFilter = titleFilterFromDiscovered(family);
+      const row = { title: family, applyUrl, titleFilter };
+      if (!offeredByFamily.has(key)) offeredByFamily.set(key, row);
+      if (isTargetRole(job.title, source.sourceKey)) {
+        // Prefer a direct Summer 2027 posting URL when available.
+        nowOpenByFamily.set(key, row);
+      }
+    }
+  }
+
+  const roles: DiscoveredInternshipRole[] = [];
+  for (const [key, offered] of offeredByFamily) {
+    const open = nowOpenByFamily.get(key);
+    roles.push({
+      title: (open ?? offered).title,
+      applyUrl: (open ?? offered).applyUrl,
+      sourceType: source.sourceType,
+      sourceKey: source.sourceKey,
+      titleFilter: (open ?? offered).titleFilter,
+      open: Boolean(open),
+    });
+  }
+
+  return roles.sort((a, b) => a.title.localeCompare(b.title));
+}
+
+function cleanDiscoveredTitle(title: string) {
+  return roleFamilyTitle(title)
+    .replace(/,\s*$/, "")
+    .replace(/\s+,/g, ",")
+    .trim();
+}
+
+function titleFilterFromDiscovered(familyTitle: string) {
+  return (
+    familyTitle
+      .replace(/\b(?:summer\s*)?20\d{2}\b/gi, "")
+      .replace(/\bintern(?:ship)?s?\b/gi, "")
+      .replace(/\s+/g, " ")
+      .trim() || familyTitle
+  );
+}
+
+function boardFallbackUrl(source: {
+  sourceType: "greenhouse" | "lever" | "ashby" | "careers-page";
+  sourceKey: string;
+}) {
+  switch (source.sourceType) {
+    case "greenhouse":
+      return `https://boards.greenhouse.io/${source.sourceKey}`;
+    case "lever":
+      return `https://jobs.lever.co/${source.sourceKey}`;
+    case "ashby":
+      return `https://jobs.ashbyhq.com/${source.sourceKey}`;
+    default:
+      return source.sourceKey;
+  }
 }

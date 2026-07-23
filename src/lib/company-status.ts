@@ -30,6 +30,7 @@ export const COMPANY_DROP_STATUS: Record<string, DropStatus> = {
   Snap: "waiting",
   Spotify: "waiting",
   TikTok: "waiting",
+  X: "waiting",
   Stripe: "waiting",
   Coinbase: "soon",
   Notion: "waiting",

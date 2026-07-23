@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import type { CompanyRequest } from "@/lib/db";
-import { parseRequestedRoles } from "@/lib/company-request-approve";
+import { parseRequestedRoles, hasListedRoles } from "@/lib/company-request-approve";
 import { fetchFormSubmitSubmissions } from "@/lib/company-request-import";
 import { formatPhoneDisplay } from "@/lib/phone";
 
@@ -34,6 +34,26 @@ function readLocalQueue(): LocalCompanyRequest[] {
 
 function writeLocalQueue(items: LocalCompanyRequest[]) {
   window.sessionStorage.setItem(LOCAL_QUEUE_KEY, JSON.stringify(items));
+}
+
+function formatApproveFlash(
+  added: Array<{ title: string; status?: "open" | "closed" }>,
+) {
+  if (added.length === 0) return "Request approved.";
+  const open = added.filter((a) => a.status === "open");
+  const monitor = added.filter((a) => a.status !== "open");
+  const parts: string[] = [];
+  if (open.length) {
+    parts.push(
+      `Apply Now: ${open.map((a) => a.title).join(", ")}`,
+    );
+  }
+  if (monitor.length) {
+    parts.push(
+      `Monitoring: ${monitor.map((a) => a.title).join(", ")}`,
+    );
+  }
+  return parts.join(" · ");
 }
 
 function toLocalRequests(
@@ -255,14 +275,11 @@ export function AdminSignupsPanel() {
           return;
         }
         removeLocal(id);
-        const added = (data.added ?? []) as Array<{ title: string }>;
-        setFlash(
-          added.length
-            ? `Added ${added.length} role${added.length === 1 ? "" : "s"}: ${added
-                .map((a) => a.title)
-                .join(", ")}`
-            : "Company added.",
-        );
+        const added = (data.added ?? []) as Array<{
+          title: string;
+          status?: "open" | "closed";
+        }>;
+        setFlash(formatApproveFlash(added));
         return;
       }
 
@@ -285,14 +302,11 @@ export function AdminSignupsPanel() {
       }
 
       setRequests((prev) => prev.filter((r) => r.id !== id));
-      const added = (data.added ?? []) as Array<{ title: string }>;
-      setFlash(
-        added.length
-          ? `Added ${added.length} role${added.length === 1 ? "" : "s"}: ${added
-              .map((a) => a.title)
-              .join(", ")}`
-          : "Request approved.",
-      );
+      const added = (data.added ?? []) as Array<{
+        title: string;
+        status?: "open" | "closed";
+      }>;
+      setFlash(formatApproveFlash(added));
     } catch {
       setError("Network error. Try again.");
     } finally {
@@ -508,8 +522,9 @@ export function AdminSignupsPanel() {
           ) : null}
         </h2>
         <p className="admin-lead">
-          Approve (✓) adds the company and roles to the live catalog so people
-          can track them. Reject (✕) dismisses the request.
+          Approve (✓) checks if each role is already open: open → Apply Now,
+          otherwise → monitor list. Leave roles blank to auto-scan the careers
+          page / ATS for internship roles. Reject (✕) dismisses the request.
         </p>
 
         <div className="admin-import">
@@ -580,7 +595,9 @@ export function AdminSignupsPanel() {
                 careersUrl: "",
                 rolesText: item.roles ?? "",
               };
-              const previewRoles = parseRequestedRoles(localDraft.rolesText);
+              const previewRoles = hasListedRoles(localDraft.rolesText)
+                ? parseRequestedRoles(localDraft.rolesText)
+                : null;
               const busy = busyId === item.id;
 
               return (
@@ -643,7 +660,11 @@ export function AdminSignupsPanel() {
                     </label>
 
                     <p className="admin-request-preview">
-                      Will add: {previewRoles.join(" · ")}
+                      {previewRoles
+                        ? `Will add: ${previewRoles.join(" · ")}`
+                        : localDraft.careersUrl.trim()
+                          ? "Roles blank — will auto-scan careers/ATS for internships."
+                          : "Roles blank — will try to find this company’s internship board, or default to Software Engineering Intern."}
                     </p>
                   </div>
 

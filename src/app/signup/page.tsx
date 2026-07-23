@@ -3,6 +3,7 @@ import { SignupFlow } from "@/components/SignupFlow";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteNav } from "@/components/SiteNav";
 import { getUserById, listUserTracking } from "@/lib/db";
+import { companyLogoUrl } from "@/lib/company-logos";
 import { INTERNSHIP_CATALOG } from "@/lib/internships";
 import { getSessionUserId } from "@/lib/session";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -19,6 +20,7 @@ const catalogInternships = INTERNSHIP_CATALOG.map((item, i) => ({
   sourceType: item.sourceType,
   applyUrl: item.applyUrl,
   openedAt: null as string | null,
+  logoUrl: companyLogoUrl(item.company),
 }));
 
 export default async function SignupPage() {

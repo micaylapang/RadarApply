@@ -12,6 +12,7 @@ export type InternshipRow = {
   opened_at: string | null;
   last_checked: string | null;
   managed_by: string;
+  logo_url?: string | null;
   created_at: string;
 };
 
@@ -239,6 +240,7 @@ export type Internship = {
   status: string;
   openedAt: string | null;
   lastChecked: string | null;
+  logoUrl: string | null;
   createdAt: string;
 };
 
@@ -256,6 +258,7 @@ export function mapInternship(row: InternshipRow): Internship {
     status: row.status,
     openedAt: row.opened_at,
     lastChecked: row.last_checked,
+    logoUrl: (row as InternshipRow).logo_url ?? null,
     createdAt: row.created_at,
   };
 }

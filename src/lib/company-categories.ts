@@ -55,6 +55,7 @@ export const COMPANY_CATEGORIES: Record<string, CompanyCategoryId[]> = {
   Snap: ["big-tech", "startups"],
   Spotify: ["big-tech"],
   TikTok: ["big-tech"],
+  X: ["big-tech", "startups"],
   Stripe: ["startups", "fintech"],
   Notion: ["startups"],
   Figma: ["startups"],

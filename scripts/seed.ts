@@ -60,21 +60,37 @@ async function main() {
   const { data: existing, error: listErr } = await sb
     .from("internships")
     .select("id, slug, company, title, managed_by");
-  if (listErr) throw listErr;
 
-  for (const row of existing ?? []) {
-    if (keepSlugs.has(row.slug)) continue;
-    if ((row as { managed_by?: string }).managed_by === "request") {
-      console.log(
-        `  · keep request-added ${row.company} — ${row.title} (${row.slug})`,
-      );
-      continue;
+  if (listErr) {
+    // Older DBs may lack managed_by — still prune by slug, keep unknown extras.
+    const fallback = await sb
+      .from("internships")
+      .select("id, slug, company, title");
+    if (fallback.error) throw listErr;
+    for (const row of fallback.data ?? []) {
+      if (keepSlugs.has(row.slug)) continue;
+      const { error } = await sb.from("internships").delete().eq("id", row.id);
+      if (error) {
+        console.warn(`  ! could not remove ${row.slug}: ${error.message}`);
+      } else {
+        console.log(`  − removed ${row.company} — ${row.title} (${row.slug})`);
+      }
     }
-    const { error } = await sb.from("internships").delete().eq("id", row.id);
-    if (error) {
-      console.warn(`  ! could not remove ${row.slug}: ${error.message}`);
-    } else {
-      console.log(`  − removed ${row.company} — ${row.title} (${row.slug})`);
+  } else {
+    for (const row of existing ?? []) {
+      if (keepSlugs.has(row.slug)) continue;
+      if ((row as { managed_by?: string }).managed_by === "request") {
+        console.log(
+          `  · keep request-added ${row.company} — ${row.title} (${row.slug})`,
+        );
+        continue;
+      }
+      const { error } = await sb.from("internships").delete().eq("id", row.id);
+      if (error) {
+        console.warn(`  ! could not remove ${row.slug}: ${error.message}`);
+      } else {
+        console.log(`  − removed ${row.company} — ${row.title} (${row.slug})`);
+      }
     }
   }
 
@@ -152,6 +168,12 @@ async function main() {
     "palantir-yap-swe-nyc",
     "apple-swe-intern",
     "apple-ml-intern",
+    "apple-hardware-intern",
+    "apple-hardware-tech-intern",
+    "apple-product-design-intern",
+    "apple-ops-mfg-design-intern",
+    "apple-epm-intern",
+    "apple-bmc-intern",
     "scale-ai-builder-intern",
   ];
   for (const slug of openSlugs) {

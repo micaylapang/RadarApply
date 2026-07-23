@@ -1,0 +1,22 @@
+---
+description: Auto-commit, push, and deploy after completing user-requested work
+alwaysApply: true
+---
+
+# Auto-deploy after changes
+
+Whenever the user asks for a change and the work is done (or a meaningful chunk is ready to ship):
+
+1. **Commit** the relevant changes with a concise message (follow the repo’s git commit protocol / HEREDOC style).
+2. **Push** to `origin` on the current branch (`git push -u origin HEAD` if needed).
+3. Assume **Vercel production deploys from `main`** on push — do not stop at local-only edits.
+4. After push, briefly tell the user the commit is live / deploying (include the commit subject).
+
+Do this **without waiting** for a separate “commit/push/deploy” request.
+
+## Exceptions
+
+- Do not commit or push secrets (`.env`, credentials, private keys).
+- Do not force-push to `main`/`master`.
+- If push fails (auth/network), fix or report the error; don’t silently leave work undployed.
+- If the user explicitly says not to deploy for a task, skip push for that task only.

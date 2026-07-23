@@ -5,7 +5,7 @@ import {
   type InternshipRow,
   type UserRow,
 } from "@/lib/database.types";
-import { buildRequestCatalogItems } from "@/lib/company-request-approve";
+import { buildAndCheckRequestCatalogItems } from "@/lib/company-request-approve";
 import { dedupeByCompanyRole } from "@/lib/role-meta";
 
 const USER_SELECT_FULL =
@@ -653,9 +653,12 @@ export async function upsertInternshipCatalogItem(item: {
   sourceKey: string | null;
   titleFilter: string | null;
   managedBy?: "catalog" | "request";
+  status?: "open" | "closed";
+  lastChecked?: string | null;
+  logoUrl?: string | null;
 }) {
   const supabase = getSupabaseAdmin();
-  const base = {
+  const core = {
     company: item.company,
     title: item.title,
     slug: item.slug,
@@ -664,37 +667,85 @@ export async function upsertInternshipCatalogItem(item: {
     source_type: item.sourceType,
     source_key: item.sourceKey,
     title_filter: item.titleFilter,
+    ...(item.status ? { status: item.status } : {}),
+    ...(item.lastChecked !== undefined
+      ? { last_checked: item.lastChecked }
+      : {}),
   };
 
-  const { error } = await supabase.from("internships").upsert(
-    {
-      ...base,
-      ...(item.managedBy ? { managed_by: item.managedBy } : {}),
-    } as {
-      company: string;
-      title: string;
-      slug: string;
-      description: string;
-      apply_url: string;
-      source_type: string;
-      source_key: string | null;
-      title_filter: string | null;
-      managed_by?: string;
-    },
-    { onConflict: "slug" },
-  );
+  const full = {
+    ...core,
+    ...(item.managedBy ? { managed_by: item.managedBy } : {}),
+    ...(item.logoUrl !== undefined ? { logo_url: item.logoUrl } : {}),
+  };
 
-  if (error) {
-    // Older DBs may not have managed_by yet — retry without it.
-    if (item.managedBy && isMissingColumnError(error, ["managed_by"])) {
-      const retry = await supabase
-        .from("internships")
-        .upsert(base, { onConflict: "slug" });
-      if (retry.error) throw retry.error;
-      return;
+  const { error } = await supabase
+    .from("internships")
+    .upsert(full as typeof full, { onConflict: "slug" });
+
+  if (!error) return;
+
+  // Older DBs may lack managed_by and/or logo_url — strip missing columns and retry.
+  if (isMissingColumnError(error, ["managed_by", "logo_url"])) {
+    const stripped = { ...full } as Record<string, unknown>;
+    if (isMissingColumnError(error, ["managed_by"])) delete stripped.managed_by;
+    if (isMissingColumnError(error, ["logo_url"])) delete stripped.logo_url;
+
+    const retry = await supabase
+      .from("internships")
+      .upsert(stripped, { onConflict: "slug" });
+    if (retry.error) {
+      // Still failing on the other optional column.
+      if (isMissingColumnError(retry.error, ["managed_by", "logo_url"])) {
+        const coreOnly = { ...core } as Record<string, unknown>;
+        const last = await supabase
+          .from("internships")
+          .upsert(coreOnly, { onConflict: "slug" });
+        if (last.error) throw last.error;
+        return;
+      }
+      throw retry.error;
     }
-    throw error;
+    return;
   }
+
+  throw error;
+}
+
+export type AddedCatalogRole = {
+  company: string;
+  title: string;
+  slug: string;
+  status: "open" | "closed";
+};
+
+async function upsertCheckedRequestCatalogItems(
+  items: Awaited<ReturnType<typeof buildAndCheckRequestCatalogItems>>,
+): Promise<AddedCatalogRole[]> {
+  const added: AddedCatalogRole[] = [];
+  for (const item of items) {
+    await upsertInternshipCatalogItem({
+      company: item.company,
+      title: item.title,
+      slug: item.slug,
+      description: item.description,
+      applyUrl: item.applyUrl,
+      sourceType: item.sourceType,
+      sourceKey: item.sourceKey,
+      titleFilter: item.titleFilter,
+      managedBy: "request",
+      status: item.status,
+      lastChecked: item.lastChecked,
+      logoUrl: item.logoUrl,
+    });
+    added.push({
+      company: item.company,
+      title: item.title,
+      slug: item.slug,
+      status: item.status,
+    });
+  }
+  return added;
 }
 
 export type CompanyRequest = {
@@ -826,7 +877,7 @@ export async function approveCompanyRequest(
   opts?: { careersUrl?: string | null; rolesText?: string | null },
 ): Promise<{
   request: CompanyRequest;
-  added: Array<{ company: string; title: string; slug: string }>;
+  added: AddedCatalogRole[];
 }> {
   const existing = await getCompanyRequest(id);
   if (!existing) {
@@ -839,30 +890,19 @@ export async function approveCompanyRequest(
     throw new Error("Request was already rejected.");
   }
 
-  const items = buildRequestCatalogItems({
+  const items = await buildAndCheckRequestCatalogItems({
     company: existing.company,
     rolesText: opts?.rolesText ?? existing.roles,
     careersUrl: opts?.careersUrl,
   });
-
-  for (const item of items) {
-    await upsertInternshipCatalogItem({
-      company: item.company,
-      title: item.title,
-      slug: item.slug,
-      description: item.description,
-      applyUrl: item.applyUrl,
-      sourceType: item.sourceType,
-      sourceKey: item.sourceKey,
-      titleFilter: item.titleFilter,
-      managedBy: "request",
-    });
-  }
+  const added = await upsertCheckedRequestCatalogItems(items);
 
   const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
-  const note = `Added ${items.length} role${items.length === 1 ? "" : "s"}: ${items
-    .map((i) => i.title)
+  const openCount = added.filter((a) => a.status === "open").length;
+  const monitorCount = added.length - openCount;
+  const note = `Added ${added.length} role${added.length === 1 ? "" : "s"} (${openCount} Apply Now, ${monitorCount} monitoring): ${added
+    .map((i) => `${i.title}${i.status === "open" ? " [open]" : ""}`)
     .join(", ")}`;
 
   const { data, error } = await supabase
@@ -886,11 +926,7 @@ export async function approveCompanyRequest(
 
   return {
     request: mapCompanyRequest(data),
-    added: items.map((i) => ({
-      company: i.company,
-      title: i.title,
-      slug: i.slug,
-    })),
+    added,
   };
 }
 
@@ -1043,32 +1079,12 @@ export async function applyCompanyRequestCatalog(opts: {
   company: string;
   rolesText?: string | null;
   careersUrl?: string | null;
-}) {
-  const items = buildRequestCatalogItems({
+}): Promise<{ added: AddedCatalogRole[] }> {
+  const items = await buildAndCheckRequestCatalogItems({
     company: opts.company,
     rolesText: opts.rolesText,
     careersUrl: opts.careersUrl,
   });
-
-  for (const item of items) {
-    await upsertInternshipCatalogItem({
-      company: item.company,
-      title: item.title,
-      slug: item.slug,
-      description: item.description,
-      applyUrl: item.applyUrl,
-      sourceType: item.sourceType,
-      sourceKey: item.sourceKey,
-      titleFilter: item.titleFilter,
-      managedBy: "request",
-    });
-  }
-
-  return {
-    added: items.map((i) => ({
-      company: i.company,
-      title: i.title,
-      slug: i.slug,
-    })),
-  };
+  const added = await upsertCheckedRequestCatalogItems(items);
+  return { added };
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { listInternships } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { INTERNSHIP_CATALOG } from "@/lib/internships";
+import { companyLogoUrl } from "@/lib/company-logos";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export async function GET() {
         applyUrl: item.applyUrl,
         openedAt: null,
         sourceType: item.sourceType,
+        logoUrl: companyLogoUrl(item.company),
       })),
       warning: "Supabase not configured",
     });
@@ -36,6 +38,7 @@ export async function GET() {
         applyUrl: i.applyUrl,
         openedAt: i.openedAt,
         sourceType: i.sourceType,
+        logoUrl: companyLogoUrl(i.company, i.logoUrl),
       })),
     });
   } catch (err) {
