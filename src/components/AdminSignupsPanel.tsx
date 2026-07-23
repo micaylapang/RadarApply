@@ -38,21 +38,25 @@ function writeLocalQueue(items: LocalCompanyRequest[]) {
 
 function formatApproveFlash(
   added: Array<{ title: string; status?: "open" | "closed" }>,
+  skipped: Array<{ title: string }> = [],
 ) {
-  if (added.length === 0) return "Request approved.";
-  const open = added.filter((a) => a.status === "open");
-  const monitor = added.filter((a) => a.status !== "open");
   const parts: string[] = [];
-  if (open.length) {
+  if (added.length) {
+    const open = added.filter((a) => a.status === "open");
+    const monitor = added.filter((a) => a.status !== "open");
+    if (open.length) {
+      parts.push(`Apply Now: ${open.map((a) => a.title).join(", ")}`);
+    }
+    if (monitor.length) {
+      parts.push(`Monitoring: ${monitor.map((a) => a.title).join(", ")}`);
+    }
+  }
+  if (skipped.length) {
     parts.push(
-      `Apply Now: ${open.map((a) => a.title).join(", ")}`,
+      `Already tracked (skipped): ${skipped.map((a) => a.title).join(", ")}`,
     );
   }
-  if (monitor.length) {
-    parts.push(
-      `Monitoring: ${monitor.map((a) => a.title).join(", ")}`,
-    );
-  }
+  if (parts.length === 0) return "Request approved — nothing new to add.";
   return parts.join(" · ");
 }
 
@@ -279,7 +283,8 @@ export function AdminSignupsPanel() {
           title: string;
           status?: "open" | "closed";
         }>;
-        setFlash(formatApproveFlash(added));
+        const skipped = (data.skipped ?? []) as Array<{ title: string }>;
+        setFlash(formatApproveFlash(added, skipped));
         return;
       }
 
@@ -306,7 +311,8 @@ export function AdminSignupsPanel() {
         title: string;
         status?: "open" | "closed";
       }>;
-      setFlash(formatApproveFlash(added));
+      const skipped = (data.skipped ?? []) as Array<{ title: string }>;
+      setFlash(formatApproveFlash(added, skipped));
     } catch {
       setError("Network error. Try again.");
     } finally {
@@ -524,7 +530,8 @@ export function AdminSignupsPanel() {
         <p className="admin-lead">
           Approve (✓) checks if each role is already open: open → Apply Now,
           otherwise → monitor list. Leave roles blank to auto-scan the careers
-          page / ATS for internship roles. Reject (✕) dismisses the request.
+          page / ATS for internship roles. Roles already in the catalog are
+          skipped. Reject (✕) dismisses the request.
         </p>
 
         <div className="admin-import">

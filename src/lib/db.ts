@@ -6,7 +6,7 @@ import {
   type UserRow,
 } from "@/lib/database.types";
 import { buildAndCheckRequestCatalogItems } from "@/lib/company-request-approve";
-import { dedupeByCompanyRole } from "@/lib/role-meta";
+import { companyRoleFamilyKey, dedupeByCompanyRole } from "@/lib/role-meta";
 
 const USER_SELECT_FULL =
   "id, name, phone, created_at, season_pass_expires_at, stripe_customer_id, stripe_checkout_session_id";
@@ -719,11 +719,47 @@ export type AddedCatalogRole = {
   status: "open" | "closed";
 };
 
+export type CatalogWriteResult = {
+  added: AddedCatalogRole[];
+  skipped: AddedCatalogRole[];
+};
+
+function companyNamesMatch(a: string, b: string) {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/** True when catalog already has this company + role family (or exact slug). */
+function isDuplicateCatalogRole(
+  existing: Internship[],
+  item: { company: string; title: string; slug: string },
+) {
+  const familyKey = companyRoleFamilyKey(item.company, item.title);
+  return existing.some((row) => {
+    if (!companyNamesMatch(row.company, item.company)) return false;
+    if (row.slug === item.slug) return true;
+    return companyRoleFamilyKey(row.company, row.title) === familyKey;
+  });
+}
+
 async function upsertCheckedRequestCatalogItems(
   items: Awaited<ReturnType<typeof buildAndCheckRequestCatalogItems>>,
-): Promise<AddedCatalogRole[]> {
+): Promise<CatalogWriteResult> {
+  const existing = await listInternships();
   const added: AddedCatalogRole[] = [];
+  const skipped: AddedCatalogRole[] = [];
+
   for (const item of items) {
+    const role = {
+      company: item.company,
+      title: item.title,
+      slug: item.slug,
+      status: item.status,
+    };
+    if (isDuplicateCatalogRole(existing, item)) {
+      skipped.push(role);
+      continue;
+    }
+
     await upsertInternshipCatalogItem({
       company: item.company,
       title: item.title,
@@ -738,14 +774,27 @@ async function upsertCheckedRequestCatalogItems(
       lastChecked: item.lastChecked,
       logoUrl: item.logoUrl,
     });
-    added.push({
+    added.push(role);
+    // Prevent duplicates within the same approve batch.
+    existing.push({
+      id: `pending-${item.slug}`,
       company: item.company,
       title: item.title,
       slug: item.slug,
+      description: item.description,
+      applyUrl: item.applyUrl,
+      sourceType: item.sourceType,
+      sourceKey: item.sourceKey,
+      titleFilter: item.titleFilter,
       status: item.status,
+      openedAt: null,
+      lastChecked: item.lastChecked,
+      logoUrl: item.logoUrl,
+      createdAt: new Date().toISOString(),
     });
   }
-  return added;
+
+  return { added, skipped };
 }
 
 export type CompanyRequest = {
@@ -878,13 +927,14 @@ export async function approveCompanyRequest(
 ): Promise<{
   request: CompanyRequest;
   added: AddedCatalogRole[];
+  skipped: AddedCatalogRole[];
 }> {
   const existing = await getCompanyRequest(id);
   if (!existing) {
     throw new Error("Request not found.");
   }
   if (existing.status === "approved") {
-    return { request: existing, added: [] };
+    return { request: existing, added: [], skipped: [] };
   }
   if (existing.status === "rejected") {
     throw new Error("Request was already rejected.");
@@ -895,15 +945,28 @@ export async function approveCompanyRequest(
     rolesText: opts?.rolesText ?? existing.roles,
     careersUrl: opts?.careersUrl,
   });
-  const added = await upsertCheckedRequestCatalogItems(items);
+  const { added, skipped } = await upsertCheckedRequestCatalogItems(items);
 
   const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
   const openCount = added.filter((a) => a.status === "open").length;
   const monitorCount = added.length - openCount;
-  const note = `Added ${added.length} role${added.length === 1 ? "" : "s"} (${openCount} Apply Now, ${monitorCount} monitoring): ${added
-    .map((i) => `${i.title}${i.status === "open" ? " [open]" : ""}`)
-    .join(", ")}`;
+  const parts: string[] = [];
+  if (added.length) {
+    parts.push(
+      `Added ${added.length} (${openCount} Apply Now, ${monitorCount} monitoring): ${added
+        .map((i) => `${i.title}${i.status === "open" ? " [open]" : ""}`)
+        .join(", ")}`,
+    );
+  }
+  if (skipped.length) {
+    parts.push(
+      `Skipped ${skipped.length} already tracked: ${skipped
+        .map((i) => i.title)
+        .join(", ")}`,
+    );
+  }
+  const note = parts.join(" · ") || "Approved — no new roles to add.";
 
   const { data, error } = await supabase
     .from("company_requests")
@@ -927,6 +990,7 @@ export async function approveCompanyRequest(
   return {
     request: mapCompanyRequest(data),
     added,
+    skipped,
   };
 }
 
@@ -1079,12 +1143,11 @@ export async function applyCompanyRequestCatalog(opts: {
   company: string;
   rolesText?: string | null;
   careersUrl?: string | null;
-}): Promise<{ added: AddedCatalogRole[] }> {
+}): Promise<CatalogWriteResult> {
   const items = await buildAndCheckRequestCatalogItems({
     company: opts.company,
     rolesText: opts.rolesText,
     careersUrl: opts.careersUrl,
   });
-  const added = await upsertCheckedRequestCatalogItems(items);
-  return { added };
+  return upsertCheckedRequestCatalogItems(items);
 }

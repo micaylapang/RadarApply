@@ -80,6 +80,7 @@ export async function POST(request: Request, { params }: Params) {
       ok: true,
       request: result.request,
       added: result.added,
+      skipped: result.skipped,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Review failed.";

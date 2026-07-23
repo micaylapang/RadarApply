@@ -65,7 +65,11 @@ export async function POST(request: Request) {
       rolesText: parsed.data.rolesText,
       careersUrl: parsed.data.careersUrl,
     });
-    return NextResponse.json({ ok: true, added: result.added });
+    return NextResponse.json({
+      ok: true,
+      added: result.added,
+      skipped: result.skipped,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not add company.";
     console.error("[admin/company-requests/apply]", err);
