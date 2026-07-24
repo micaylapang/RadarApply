@@ -425,14 +425,14 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     titleFilter: "Data",
   },
 
-  // Microsoft — university internship tracks (students hub + program pages)
+  // Microsoft — university internship tracks (Summer 2027 US)
   {
     company: "Microsoft",
     title: "Software Engineering Intern",
     slug: "microsoft-swe-intern",
     description: "Microsoft US software engineering internship",
     applyUrl:
-      "https://jobs.careers.microsoft.com/global/en/search?q=Software%20Engineering%20Intern&lc=United%20States",
+      "https://jobs.careers.microsoft.com/global/en/search?q=Software%20Engineering%20Intern%20Summer%202027&lc=United%20States",
     sourceType: "manual",
     sourceKey: null,
     titleFilter: "Software Engineering Intern",
@@ -443,10 +443,23 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     slug: "microsoft-explore-intern",
     description:
       "Microsoft Explore internship for first- and second-year undergraduates",
-    applyUrl: "https://careers.microsoft.com/v2/global/en/exploremicrosoft",
+    applyUrl:
+      "https://jobs.careers.microsoft.com/global/en/search?q=Explore%20Microsoft%20Summer%202027&lc=United%20States",
     sourceType: "manual",
     sourceKey: null,
     titleFilter: "Explore",
+  },
+  {
+    company: "Microsoft",
+    title: "Discovery Intern",
+    slug: "microsoft-discovery-intern",
+    description:
+      "Microsoft Discovery Program internship for rising first-year students (Redmond / Atlanta)",
+    applyUrl:
+      "https://jobs.careers.microsoft.com/global/en/search?q=Discovery%20Intern%20Summer%202027&lc=United%20States",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "Discovery",
   },
   {
     company: "Microsoft",
@@ -454,7 +467,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     slug: "microsoft-pm-intern",
     description: "Microsoft US program manager internship",
     applyUrl:
-      "https://jobs.careers.microsoft.com/global/en/search?q=Program%20Manager%20Intern&lc=United%20States",
+      "https://jobs.careers.microsoft.com/global/en/search?q=Program%20Manager%20Intern%20Summer%202027&lc=United%20States",
     sourceType: "manual",
     sourceKey: null,
     titleFilter: "Program Manager Intern",
@@ -465,7 +478,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     slug: "microsoft-data-intern",
     description: "Microsoft US data science internship",
     applyUrl:
-      "https://jobs.careers.microsoft.com/global/en/search?q=Data%20Science%20Intern&lc=United%20States",
+      "https://jobs.careers.microsoft.com/global/en/search?q=Data%20Science%20Intern%20Summer%202027&lc=United%20States",
     sourceType: "manual",
     sourceKey: null,
     titleFilter: "Data Science Intern",
@@ -475,10 +488,22 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     title: "Research Intern",
     slug: "microsoft-research-intern",
     description: "Microsoft Research internship (typically PhD)",
-    applyUrl: "https://www.microsoft.com/en-us/research/careers/",
+    applyUrl:
+      "https://jobs.careers.microsoft.com/global/en/search?q=Research%20Intern%20Summer%202027&lc=United%20States",
     sourceType: "manual",
     sourceKey: null,
     titleFilter: "Research Intern",
+  },
+  {
+    company: "Microsoft",
+    title: "MBA Intern",
+    slug: "microsoft-mba-intern",
+    description: "Microsoft US MBA internship",
+    applyUrl:
+      "https://jobs.careers.microsoft.com/global/en/search?q=MBA%20Intern%20Summer%202027&lc=United%20States",
+    sourceType: "manual",
+    sourceKey: null,
+    titleFilter: "MBA Intern",
   },
   {
     company: "Microsoft",
@@ -486,7 +511,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     slug: "microsoft-hardware-intern",
     description: "Microsoft US hardware engineering internship",
     applyUrl:
-      "https://jobs.careers.microsoft.com/global/en/search?q=Hardware%20Intern&lc=United%20States",
+      "https://jobs.careers.microsoft.com/global/en/search?q=Hardware%20Intern%20Summer%202027&lc=United%20States",
     sourceType: "manual",
     sourceKey: null,
     titleFilter: "Hardware",
@@ -497,7 +522,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     slug: "microsoft-ux-intern",
     description: "Microsoft US UX / product design internship",
     applyUrl:
-      "https://jobs.careers.microsoft.com/global/en/search?q=UX%20Design%20Intern&lc=United%20States",
+      "https://jobs.careers.microsoft.com/global/en/search?q=UX%20Design%20Intern%20Summer%202027&lc=United%20States",
     sourceType: "manual",
     sourceKey: null,
     titleFilter: "UX",
@@ -508,7 +533,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     slug: "microsoft-security-intern",
     description: "Microsoft US security engineering internship",
     applyUrl:
-      "https://jobs.careers.microsoft.com/global/en/search?q=Security%20Intern&lc=United%20States",
+      "https://jobs.careers.microsoft.com/global/en/search?q=Security%20Intern%20Summer%202027&lc=United%20States",
     sourceType: "manual",
     sourceKey: null,
     titleFilter: "Security",
@@ -519,7 +544,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     slug: "microsoft-applied-science-intern",
     description: "Microsoft US applied science internship",
     applyUrl:
-      "https://jobs.careers.microsoft.com/global/en/search?q=Applied%20Science%20Intern&lc=United%20States",
+      "https://jobs.careers.microsoft.com/global/en/search?q=Applied%20Science%20Intern%20Summer%202027&lc=United%20States",
     sourceType: "manual",
     sourceKey: null,
     titleFilter: "Applied Science",
@@ -530,7 +555,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     slug: "microsoft-finance-intern",
     description: "Microsoft US finance internship",
     applyUrl:
-      "https://jobs.careers.microsoft.com/global/en/search?q=Finance%20Intern&lc=United%20States",
+      "https://jobs.careers.microsoft.com/global/en/search?q=Finance%20Intern%20Summer%202027&lc=United%20States",
     sourceType: "manual",
     sourceKey: null,
     titleFilter: "Finance Intern",
@@ -541,7 +566,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     slug: "microsoft-marketing-intern",
     description: "Microsoft US marketing internship",
     applyUrl:
-      "https://jobs.careers.microsoft.com/global/en/search?q=Marketing%20Intern&lc=United%20States",
+      "https://jobs.careers.microsoft.com/global/en/search?q=Marketing%20Intern%20Summer%202027&lc=United%20States",
     sourceType: "manual",
     sourceKey: null,
     titleFilter: "Marketing Intern",
