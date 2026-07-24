@@ -7,8 +7,10 @@ import { isRoleOpenForApply } from "@/lib/company-status";
 import {
   companyRoleFamilyKey,
   dedupeByCompanyApplyUrl,
+  roleApplySeason,
   roleFamilyTitle,
   roleVariantLabel,
+  type ApplySeason,
 } from "@/lib/role-meta";
 
 type OpenRole = {
@@ -29,6 +31,17 @@ type RoleFamily = {
     label: string;
     applyUrl: string;
   }>;
+};
+
+type CompanyGroup = {
+  company: string;
+  logoUrl: string | null;
+  families: RoleFamily[];
+};
+
+type SeasonSection = {
+  season: ApplySeason;
+  companies: CompanyGroup[];
 };
 
 function CompanyLogo({
@@ -142,12 +155,12 @@ function RoleApplyRow({ family }: { family: RoleFamily }) {
       <span className="apply-link-copy">
         <span className="apply-link-title">{family.title}</span>
         <span className="apply-link-meta is-open-now">
-          {family.variants.length} options · Open Now
+          {family.variants.length} types · Open Now
         </span>
       </span>
       <div className="apply-role-family-actions">
         <label className="sr-only" htmlFor={`apply-variant-${family.key}`}>
-          Choose {family.title} option
+          Choose {family.title} type
         </label>
         <select
           id={`apply-variant-${family.key}`}
@@ -211,34 +224,52 @@ export function OpenRolesBoard() {
     };
   }, []);
 
-  const groups = useMemo(() => {
+  const sections = useMemo(() => {
     const open = dedupeByCompanyApplyUrl(
       roles.filter(
         (role) => isListedOpen(role) && isDirectApplyUrl(role.applyUrl),
       ),
     );
 
-    const map = new Map<string, OpenRole[]>();
+    const bySeason = new Map<
+      string,
+      { season: ApplySeason; byCompany: Map<string, OpenRole[]> }
+    >();
+
     for (const role of open) {
-      const list = map.get(role.company) ?? [];
+      const season = roleApplySeason(role.title, role.company);
+      let bucket = bySeason.get(season.id);
+      if (!bucket) {
+        bucket = { season, byCompany: new Map() };
+        bySeason.set(season.id, bucket);
+      }
+      const list = bucket.byCompany.get(role.company) ?? [];
       list.push(role);
-      map.set(role.company, list);
+      bucket.byCompany.set(role.company, list);
     }
 
-    return Array.from(map.entries())
-      .map(([company, companyRoles]) => ({
-        company,
-        logoUrl: companyRoles.find((r) => r.logoUrl)?.logoUrl ?? null,
-        families: groupRoleFamilies(companyRoles),
+    const out: SeasonSection[] = Array.from(bySeason.values())
+      .map(({ season, byCompany }) => ({
+        season,
+        companies: Array.from(byCompany.entries())
+          .map(([company, companyRoles]) => ({
+            company,
+            logoUrl: companyRoles.find((r) => r.logoUrl)?.logoUrl ?? null,
+            families: groupRoleFamilies(companyRoles),
+          }))
+          .sort((a, b) => a.company.localeCompare(b.company)),
       }))
-      .sort((a, b) => a.company.localeCompare(b.company));
+      .sort((a, b) => a.season.sort - b.season.sort);
+
+    return out;
   }, [roles]);
 
-  function toggleCompany(company: string) {
+  function toggleCompany(seasonId: string, company: string) {
+    const key = `${seasonId}::${company}`;
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(company)) next.delete(company);
-      else next.add(company);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }
@@ -251,6 +282,11 @@ export function OpenRolesBoard() {
       </div>
     );
   }
+
+  const totalCompanies = sections.reduce(
+    (n, section) => n + section.companies.length,
+    0,
+  );
 
   return (
     <div className="open-board">
@@ -266,63 +302,88 @@ export function OpenRolesBoard() {
 
       {error ? <p className="form-error">{error}</p> : null}
 
-      {groups.length === 0 ? (
+      {totalCompanies === 0 ? (
         <p className="open-board-empty">
           No direct apply links are live in the catalog right now. Track roles
           on signup and we&apos;ll text you the minute they open.
         </p>
       ) : (
-        <ul className="open-company-list" role="list">
-          {groups.map(({ company, logoUrl, families }) => {
-            const isOpen = expanded.has(company);
-            const count = families.length;
-            const panelId = `open-roles-${company.replace(/\s+/g, "-").toLowerCase()}`;
+        <div className="open-season-stack">
+          {sections.map(({ season, companies }) => (
+            <section
+              key={season.id}
+              className="open-season-section"
+              aria-labelledby={`open-season-${season.id}`}
+            >
+              <div className="open-season-header">
+                <h2 id={`open-season-${season.id}`} className="open-season-title">
+                  {season.label}
+                </h2>
+                <p className="open-season-meta">
+                  {companies.length} compan
+                  {companies.length === 1 ? "y" : "ies"} open
+                </p>
+              </div>
 
-            return (
-              <li
-                key={company}
-                className={`open-company${isOpen ? " is-expanded" : ""}`}
-              >
-                <div className="open-company-row">
-                  <div className="open-company-title">
-                    <CompanyLogo company={company} logoUrl={logoUrl} />
-                    <div className="open-company-copy">
-                      <h2>{company}</h2>
-                      <p className="open-company-meta is-open-now">Open Now</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="open-view-roles"
-                    aria-expanded={isOpen}
-                    aria-controls={panelId}
-                    onClick={() => toggleCompany(company)}
-                  >
-                    <span>
-                      {isOpen ? "Hide Roles" : `View Roles (${count})`}
-                    </span>
-                    <span className="open-view-chevron" aria-hidden="true">
-                      {isOpen ? "▴" : "▾"}
-                    </span>
-                  </button>
-                </div>
+              <ul className="open-company-list" role="list">
+                {companies.map(({ company, logoUrl, families }) => {
+                  const expandKey = `${season.id}::${company}`;
+                  const isOpen = expanded.has(expandKey);
+                  const count = families.length;
+                  const panelId = `open-roles-${season.id}-${company
+                    .replace(/\s+/g, "-")
+                    .toLowerCase()}`;
 
-                {isOpen ? (
-                  <div
-                    id={panelId}
-                    className="open-company-roles apply-link-list"
-                    role="region"
-                    aria-label={`${company} open roles`}
-                  >
-                    {families.map((family) => (
-                      <RoleApplyRow key={family.key} family={family} />
-                    ))}
-                  </div>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
+                  return (
+                    <li
+                      key={expandKey}
+                      className={`open-company${isOpen ? " is-expanded" : ""}`}
+                    >
+                      <div className="open-company-row">
+                        <div className="open-company-title">
+                          <CompanyLogo company={company} logoUrl={logoUrl} />
+                          <div className="open-company-copy">
+                            <h3>{company}</h3>
+                            <p className="open-company-meta is-open-now">
+                              Open Now · {season.label}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="open-view-roles"
+                          aria-expanded={isOpen}
+                          aria-controls={panelId}
+                          onClick={() => toggleCompany(season.id, company)}
+                        >
+                          <span>
+                            {isOpen ? "Hide Roles" : `View Roles (${count})`}
+                          </span>
+                          <span className="open-view-chevron" aria-hidden="true">
+                            {isOpen ? "▴" : "▾"}
+                          </span>
+                        </button>
+                      </div>
+
+                      {isOpen ? (
+                        <div
+                          id={panelId}
+                          className="open-company-roles apply-link-list"
+                          role="region"
+                          aria-label={`${company} ${season.label} open roles`}
+                        >
+                          {families.map((family) => (
+                            <RoleApplyRow key={family.key} family={family} />
+                          ))}
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
       )}
     </div>
   );

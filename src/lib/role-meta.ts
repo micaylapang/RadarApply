@@ -28,11 +28,21 @@ function stripUsOnlySuffix(title: string): string {
  * Shared role name across location / track variants.
  * "Software Engineer Intern — Chicago" → "Software Engineer Intern"
  * "Software Engineer Intern - C++" → "Software Engineer Intern"
+ * "Software Engineer Intern, Infrastructure" → "Software Engineer Intern"
  */
 export function roleFamilyTitle(title: string): string {
   const base = stripUsOnlySuffix(roleBaseTitle(title));
-  const split = base.split(/\s*[—–]\s*|\s+-\s+/);
-  if (split.length >= 2 && split[0].trim()) return split[0].trim();
+  const dashSplit = base.split(/\s*[—–]\s*|\s+-\s+/);
+  if (dashSplit.length >= 2 && dashSplit[0].trim()) {
+    return dashSplit[0].trim();
+  }
+  // Team / track after a comma — only when the left side is already a full
+  // intern title (avoids splitting "Business, Marketing & Creative Intern").
+  const commaIdx = base.search(/,\s+/);
+  if (commaIdx > 0) {
+    const left = base.slice(0, commaIdx).trim();
+    if (/\bintern(?:ship)?s?\b/i.test(left)) return left;
+  }
   return base;
 }
 
@@ -41,7 +51,10 @@ export function roleVariantLabel(title: string): string | null {
   const base = stripUsOnlySuffix(roleBaseTitle(title));
   const family = roleFamilyTitle(title);
   if (base.toLowerCase() === family.toLowerCase()) return null;
-  const rest = base.slice(family.length).replace(/^[\s—–-]+/, "").trim();
+  const rest = base
+    .slice(family.length)
+    .replace(/^[\s,—–-]+/, "")
+    .trim();
   return rest || null;
 }
 
@@ -223,6 +236,52 @@ export function roleSeason(title: string): string | null {
 
 export function roleYears(title: string): number[] {
   return [...title.matchAll(/\b(20\d{2})\b/g)].map((m) => Number(m[1]));
+}
+
+/** Companies whose live Greenhouse posts are Fall 2026 (season often only on the form). */
+export const FALL_2026_APPLY_COMPANIES = new Set(["Neuralink"]);
+
+export type ApplySeasonId = "fall-2026" | "summer-2027";
+
+export type ApplySeason = {
+  id: ApplySeasonId;
+  label: string;
+  /** Lower sorts first on Apply Now. */
+  sort: number;
+};
+
+/**
+ * Season bucket for Apply Now. Fall 2026 is listed ahead of Summer 2027 when both exist.
+ */
+export function roleApplySeason(
+  title: string,
+  company?: string,
+): ApplySeason {
+  if (company && FALL_2026_APPLY_COMPANIES.has(company)) {
+    return { id: "fall-2026", label: "Fall 2026", sort: 0 };
+  }
+  if (matchesFall2026(title)) {
+    return { id: "fall-2026", label: "Fall 2026", sort: 0 };
+  }
+  return { id: "summer-2027", label: "Summer 2027", sort: 1 };
+}
+
+export function matchesFall2026(title: string): boolean {
+  const seasonYear = title.match(
+    /\b(Summer|Fall|Spring|Winter)\s+(\d{4})\b/i,
+  );
+  if (seasonYear) {
+    const season =
+      seasonYear[1][0].toUpperCase() + seasonYear[1].slice(1).toLowerCase();
+    const year = Number(seasonYear[2]);
+    return season === "Fall" && year === 2026;
+  }
+
+  const season = roleSeason(title);
+  const years = roleYears(title);
+  if (season !== "Fall") return false;
+  if (years.length === 0) return true;
+  return years.includes(2026) && years.every((y) => y === 2026);
 }
 
 /**

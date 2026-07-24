@@ -1,4 +1,5 @@
 import {
+  matchesFall2026,
   matchesSummer2027,
   roleFamilyTitle,
   roleSeason,
@@ -120,13 +121,20 @@ function isInternshipTitle(title: string) {
   return /\b(intern(?:ship)?s?|co-?op)\b/i.test(title);
 }
 
-/** Internship + Summer 2027 (or company-specific rolling intern exception). */
+/** Internship + Summer 2027 / Fall 2026 (or company-specific rolling exception). */
 function isTargetRole(title: string, sourceKey?: string | null) {
   if (!isInternshipTitle(title)) return false;
   if (matchesSummer2027(title)) return true;
+  if (matchesFall2026(title)) return true;
+
+  // Neuralink application form is Fall 2026; board titles omit the season.
+  if (sourceKey === "neuralink") {
+    if (roleSeason(title) && roleSeason(title) !== "Fall") return false;
+    const years = roleYears(title);
+    return years.length === 0 || years.includes(2026);
+  }
 
   // Kalshi posts year-round US intern roles without a season/year.
-  // Neuralink is Fall 2026 only — do not treat as Summer 2027 open.
   if (sourceKey === "kalshi") {
     if (roleSeason(title)) return false;
     const years = roleYears(title);

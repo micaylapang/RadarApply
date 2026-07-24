@@ -49,7 +49,7 @@ export const COMPANY_DROP_STATUS: Record<string, DropStatus> = {
   Optiver: "open",
   SpaceX: "waiting",
   Tesla: "waiting",
-  Neuralink: "waiting",
+  Neuralink: "open",
   "Lockheed Martin": "waiting",
   Boeing: "waiting",
   "Northrop Grumman": "waiting",

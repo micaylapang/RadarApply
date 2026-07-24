@@ -117,6 +117,24 @@ async function main() {
     "citadel-swe-intern",
     "citadel-qr-intern",
     "citadel-trading-intern",
+    "neuralink-analog-ic-intern",
+    "neuralink-digital-ic-intern",
+    "neuralink-ee-implant-intern",
+    "neuralink-embedded-intern",
+    "neuralink-firmware-intern",
+    "neuralink-it-intern",
+    "neuralink-ml-intern",
+    "neuralink-mfg-intern",
+    "neuralink-me-brain-intern",
+    "neuralink-me-robotics-intern",
+    "neuralink-neuro-intern",
+    "neuralink-materials-intern",
+    "neuralink-optics-intern",
+    "neuralink-swe-bci-intern",
+    "neuralink-swe-implant-intern",
+    "neuralink-swe-infra-intern",
+    "neuralink-swe-internal-apps-intern",
+    "neuralink-swe-robotics-intern",
     "kalshi-support-ops-intern",
     "optiver-swe-intern",
     "optiver-swe-intern-austin",
@@ -179,17 +197,6 @@ async function main() {
       .eq("slug", slug)
       .neq("status", "open");
     if (error) console.warn(`  ! open ${slug}: ${error.message}`);
-  }
-
-  // Neuralink is Fall 2026 only — keep on watchlist until Summer 2027 opens.
-  {
-    const { error } = await sb
-      .from("internships")
-      .update({ status: "closed", opened_at: null })
-      .eq("company", "Neuralink")
-      .neq("status", "closed");
-    if (error) console.warn(`  ! close Neuralink: ${error.message}`);
-    else console.log("  ✓ Neuralink forced closed (Fall 2026 watchlist)");
   }
 
   console.log(`\nSeeded ${INTERNSHIP_CATALOG.length} internships into Supabase`);

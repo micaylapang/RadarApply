@@ -1570,7 +1570,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Analog and Mixed-Signal IC Design Engineer Intern",
     slug: "neuralink-analog-ic-intern",
-    description: "Neuralink analog / mixed-signal IC design internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink analog / mixed-signal IC design internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/7565469003?gh_jid=7565469003",
     sourceType: "greenhouse",
@@ -1581,7 +1581,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Digital IC Design Engineer Intern",
     slug: "neuralink-digital-ic-intern",
-    description: "Neuralink digital IC design internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink digital IC design internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/7090489003?gh_jid=7090489003",
     sourceType: "greenhouse",
@@ -1592,7 +1592,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Electrical Engineer Intern, Implant Embedded Systems",
     slug: "neuralink-ee-implant-intern",
-    description: "Neuralink implant embedded electrical engineering internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink implant embedded electrical engineering internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/7702527003?gh_jid=7702527003",
     sourceType: "greenhouse",
@@ -1603,7 +1603,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Embedded Software Engineer Intern, Implant Embedded Systems",
     slug: "neuralink-embedded-intern",
-    description: "Neuralink implant embedded software internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink implant embedded software internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/6283663003?gh_jid=6283663003",
     sourceType: "greenhouse",
@@ -1614,7 +1614,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Firmware Engineer Intern, Robotics and Surgery Engineering",
     slug: "neuralink-firmware-intern",
-    description: "Neuralink robotics/surgery firmware internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink robotics/surgery firmware internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/6648992003?gh_jid=6648992003",
     sourceType: "greenhouse",
@@ -1625,7 +1625,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "IT Systems Administrator Intern",
     slug: "neuralink-it-intern",
-    description: "Neuralink IT systems administrator internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink IT systems administrator internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/7736276003?gh_jid=7736276003",
     sourceType: "greenhouse",
@@ -1636,7 +1636,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Machine Learning Engineer Intern",
     slug: "neuralink-ml-intern",
-    description: "Neuralink machine learning internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink machine learning internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/6594261003?gh_jid=6594261003",
     sourceType: "greenhouse",
@@ -1647,7 +1647,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Manufacturing Intern, Surgery & Robot Hardware",
     slug: "neuralink-mfg-intern",
-    description: "Neuralink surgery & robot hardware manufacturing internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink surgery & robot hardware manufacturing internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/7666761003?gh_jid=7666761003",
     sourceType: "greenhouse",
@@ -1658,7 +1658,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Mechanical Engineering Intern, Brain Interfaces",
     slug: "neuralink-me-brain-intern",
-    description: "Neuralink brain interfaces mechanical engineering internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink brain interfaces mechanical engineering internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/6545426003?gh_jid=6545426003",
     sourceType: "greenhouse",
@@ -1669,7 +1669,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Mechanical Engineering Intern, Robotics",
     slug: "neuralink-me-robotics-intern",
-    description: "Neuralink robotics mechanical engineering internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink robotics mechanical engineering internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/6514169003?gh_jid=6514169003",
     sourceType: "greenhouse",
@@ -1680,7 +1680,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Neuroengineer Intern",
     slug: "neuralink-neuro-intern",
-    description: "Neuralink neuroengineering internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink neuroengineering internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/7483748003?gh_jid=7483748003",
     sourceType: "greenhouse",
@@ -1691,7 +1691,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "R&D Materials Engineer Intern",
     slug: "neuralink-materials-intern",
-    description: "Neuralink R&D materials engineering internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink R&D materials engineering internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/7808233003?gh_jid=7808233003",
     sourceType: "greenhouse",
@@ -1702,7 +1702,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Robot Optics Intern",
     slug: "neuralink-optics-intern",
-    description: "Neuralink robot optics internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink robot optics internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/6576326003?gh_jid=6576326003",
     sourceType: "greenhouse",
@@ -1713,7 +1713,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Software Engineer Intern, BCI Applications",
     slug: "neuralink-swe-bci-intern",
-    description: "Neuralink BCI applications software internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink BCI applications software internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/6594422003?gh_jid=6594422003",
     sourceType: "greenhouse",
@@ -1724,7 +1724,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Software Engineer Intern, Implant",
     slug: "neuralink-swe-implant-intern",
-    description: "Neuralink implant software internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink implant software internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/6569018003?gh_jid=6569018003",
     sourceType: "greenhouse",
@@ -1735,7 +1735,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Software Engineer Intern, Infrastructure",
     slug: "neuralink-swe-infra-intern",
-    description: "Neuralink infrastructure software internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink infrastructure software internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/5469298003?gh_jid=5469298003",
     sourceType: "greenhouse",
@@ -1746,7 +1746,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Software Engineer Intern, Internal Apps",
     slug: "neuralink-swe-internal-apps-intern",
-    description: "Neuralink internal apps software internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink internal apps software internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/6083322003?gh_jid=6083322003",
     sourceType: "greenhouse",
@@ -1757,7 +1757,7 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
     company: "Neuralink",
     title: "Software Engineer Intern, Robotics",
     slug: "neuralink-swe-robotics-intern",
-    description: "Neuralink robotics software internship (Fall 2026 — watch for Summer 2027)",
+    description: "Neuralink robotics software internship (Fall 2026)",
     applyUrl:
       "https://boards.greenhouse.io/neuralink/jobs/5469305003?gh_jid=5469305003",
     sourceType: "greenhouse",
@@ -1955,9 +1955,30 @@ const RAW_CATALOG: InternshipCatalogItem[] = [
   },
 ];
 
-function withSummer2027Label(item: InternshipCatalogItem): InternshipCatalogItem {
+function withSeasonLabel(item: InternshipCatalogItem): InternshipCatalogItem {
   let title = item.title;
   let description = item.description;
+
+  // Neuralink's live postings interview for Fall 2026 only.
+  if (item.company === "Neuralink") {
+    title = title
+      .replace(/\s*[—–-]\s*Summer\s+2027\b/gi, "")
+      .replace(/\s+Summer\s+2027\b/gi, "")
+      .trim();
+    if (!/fall\s*2026/i.test(title)) {
+      title = `${title} — Fall 2026`;
+    }
+    if (!/\bUS\b|\bUnited States\b/i.test(title)) {
+      title = `${title} (US)`;
+    }
+    if (!/fall\s*2026/i.test(description)) {
+      description = `${description} (Fall 2026)`;
+    }
+    if (!/\bUS\b|\bUnited States\b/i.test(description)) {
+      description = `${description} · US only`;
+    }
+    return { ...item, title, description };
+  }
 
   if (!/summer\s*2027/i.test(title)) {
     title = `${title} — Summer 2027`;
@@ -1976,4 +1997,4 @@ function withSummer2027Label(item: InternshipCatalogItem): InternshipCatalogItem
 }
 
 export const INTERNSHIP_CATALOG: InternshipCatalogItem[] =
-  RAW_CATALOG.map(withSummer2027Label);
+  RAW_CATALOG.map(withSeasonLabel);
