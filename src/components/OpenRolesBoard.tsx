@@ -345,7 +345,7 @@ export function OpenRolesBoard() {
                           <div className="open-company-copy">
                             <h3>{company}</h3>
                             <p className="open-company-meta is-open-now">
-                              Open Now · {season.label}
+                              Open Now
                             </p>
                           </div>
                         </div>
